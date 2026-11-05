@@ -1,0 +1,1250 @@
+openapi: 3.1.0
+
+info:
+  title: API Identity Provider (PT6)
+  version: 0.1.0
+  summary: Autenticación, usuarios, roles y perfiles.
+  description: |
+    Microservicio central de identidad (Paquete de Trabajo 6).
+
+    Responsabilidades:
+    - Autenticar usuarios (login) y emitir tokens JWT firmados con RS256.
+    - Administrar usuarios y sus roles.
+    - Administrar roles configurables: cada producto (cliente) define los suyos.
+    - Administrar un perfil genérico por usuario, extensible mediante el campo `atributos`.
+    - Publicar la clave pública (JWKS) para que otros microservicios validen los tokens.
+
+    Cada endpoint protegido indica en `x-permiso-requerido` el permiso que el token
+    debe incluir. Si falta el token o es inválido se responde 401; si el token es válido
+    pero no tiene el permiso se responde 403.
+  contact:
+    name: Grupo 6 - PINGESO 2-2026
+
+servers:
+  - url: http://localhost:8080
+    description: Entorno de desarrollo local
+  - url: https://api.midominio.cl
+    description: Entorno de producción (por definir)
+
+# Every operation requires a JWT unless it overrides this with "security: []"
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Salud
+    description: Estado del servicio
+  - name: Autenticación
+    description: Inicio y cierre de sesión, renovación de tokens y clave pública
+  - name: Usuarios
+    description: Administración de cuentas de usuario
+  - name: Roles
+    description: Administración de roles configurables y sus permisos
+  - name: Perfiles
+    description: Perfil genérico de cada usuario, extensible por cliente
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Health
+  # ---------------------------------------------------------------------------
+  /api/v1/health:
+    get:
+      tags: [Salud]
+      operationId: verSalud
+      summary: Indica si el servicio está funcionando
+      security: []
+      responses:
+        '200':
+          description: El servicio está operativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadoSalud'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ---------------------------------------------------------------------------
+  # Authentication
+  # ---------------------------------------------------------------------------
+  /api/v1/auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: iniciarSesion
+      summary: Inicia sesión con correo y contraseña
+      description: Si las credenciales son correctas, entrega un access token y un refresh token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Correo o contraseña incorrectos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEstandar'
+              example:
+                codigo: 401
+                mensaje: Credenciales inválidas.
+                detalles: El correo o la contraseña no son correctos.
+        '403':
+          description: La cuenta existe pero está bloqueada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEstandar'
+              example:
+                codigo: 403
+                mensaje: Cuenta bloqueada.
+                detalles: Contacte al administrador.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Autenticación]
+      operationId: renovarToken
+      summary: Entrega un nuevo access token usando el refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens renovados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Autenticación]
+      operationId: cerrarSesion
+      summary: Cierra la sesión invalidando el refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Sesión cerrada (sin contenido)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/me:
+    get:
+      tags: [Autenticación]
+      operationId: obtenerUsuarioActual
+      summary: Devuelve los datos del usuario dueño del token
+      responses:
+        '200':
+          description: Usuario autenticado, con sus roles y permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioActual'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/password:
+    put:
+      tags: [Autenticación]
+      operationId: cambiarPassword
+      summary: Cambia la contraseña del usuario autenticado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioPasswordRequest'
+      responses:
+        '204':
+          description: Contraseña actualizada (sin contenido)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /.well-known/jwks.json:
+    get:
+      tags: [Autenticación]
+      operationId: obtenerJwks
+      summary: Publica la clave pública para validar los tokens
+      description: |
+        Ruta estándar  que usan los demás microservicios para
+        obtener la clave pública y verificar la firma RS256 de los tokens.
+      security: []
+      responses:
+        '200':
+          description: Conjunto de claves públicas (JWKS)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ---------------------------------------------------------------------------
+  # Users
+  # ---------------------------------------------------------------------------
+  /api/v1/usuarios:
+    get:
+      tags: [Usuarios]
+      operationId: listarUsuarios
+      summary: Lista los usuarios con paginación y filtros
+      x-permiso-requerido: usuarios:leer
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Limite'
+        - name: estado
+          in: query
+          required: false
+          description: Filtra por estado de la cuenta
+          schema:
+            $ref: '#/components/schemas/EstadoUsuario'
+        - name: email
+          in: query
+          required: false
+          description: Filtra por correo (coincidencia parcial)
+          schema:
+            type: string
+        - name: rol_id
+          in: query
+          required: false
+          description: Filtra los usuarios que tienen este rol
+          schema:
+            $ref: '#/components/schemas/ObjectId'
+      responses:
+        '200':
+          description: Página de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioPaginado'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Usuarios]
+      operationId: crearUsuario
+      summary: Crea un nuevo usuario
+      x-permiso-requerido: usuarios:crear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreateRequest'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Usuarios]
+      operationId: obtenerUsuario
+      summary: Obtiene un usuario por su ID
+      x-permiso-requerido: usuarios:leer
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Usuarios]
+      operationId: actualizarUsuario
+      summary: Actualiza parcialmente un usuario (correo o estado)
+      x-permiso-requerido: usuarios:editar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioUpdateRequest'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Usuarios]
+      operationId: eliminarUsuario
+      summary: Elimina un usuario y su perfil
+      x-permiso-requerido: usuarios:eliminar
+      responses:
+        '204':
+          description: Usuario eliminado (sin contenido)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/usuarios/{id}/roles:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Usuarios]
+      operationId: asignarRolesUsuario
+      summary: Reemplaza la lista completa de roles de un usuario
+      x-permiso-requerido: usuarios:asignar_roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignacionRolesRequest'
+      responses:
+        '200':
+          description: Roles asignados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ---------------------------------------------------------------------------
+  # Roles
+  # ---------------------------------------------------------------------------
+  /api/v1/roles:
+    get:
+      tags: [Roles]
+      operationId: listarRoles
+      summary: Lista todos los roles
+      x-permiso-requerido: roles:leer
+      responses:
+        '200':
+          description: Listado de roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RolResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Roles]
+      operationId: crearRol
+      summary: Crea un nuevo rol con sus permisos
+      x-permiso-requerido: roles:crear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolRequest'
+      responses:
+        '201':
+          description: Rol creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Roles]
+      operationId: obtenerRol
+      summary: Obtiene un rol por su ID
+      x-permiso-requerido: roles:leer
+      responses:
+        '200':
+          description: Rol encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Roles]
+      operationId: actualizarRol
+      summary: Reemplaza un rol completo (nombre, descripción y permisos)
+      x-permiso-requerido: roles:editar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolRequest'
+      responses:
+        '200':
+          description: Rol actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Roles]
+      operationId: eliminarRol
+      summary: Elimina un rol que no esté asignado a ningún usuario
+      x-permiso-requerido: roles:eliminar
+      responses:
+        '204':
+          description: Rol eliminado (sin contenido)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ---------------------------------------------------------------------------
+  # Profiles
+  # ---------------------------------------------------------------------------
+  /api/v1/perfiles:
+    get:
+      tags: [Perfiles]
+      operationId: listarPerfiles
+      summary: Lista los perfiles con paginación y búsqueda por nombre
+      x-permiso-requerido: perfiles:leer
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Limite'
+        - name: q
+          in: query
+          required: false
+          description: Texto a buscar en nombre o apellido
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Página de perfiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilPaginado'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Perfiles]
+      operationId: crearPerfil
+      summary: Crea el perfil de un usuario (un perfil por usuario)
+      x-permiso-requerido: perfiles:crear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilCreateRequest'
+      responses:
+        '201':
+          description: Perfil creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/perfiles/me:
+    get:
+      tags: [Perfiles]
+      operationId: obtenerMiPerfil
+      summary: Obtiene el perfil del usuario autenticado
+      description: No requiere permisos especiales; cada usuario puede ver su propio perfil.
+      responses:
+        '200':
+          description: Perfil propio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Perfiles]
+      operationId: actualizarMiPerfil
+      summary: Actualiza parcialmente el perfil del usuario autenticado
+      description: No requiere permisos especiales, cada usuario puede editar su propio perfil.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilUpdateRequest'
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/perfiles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Perfiles]
+      operationId: obtenerPerfil
+      summary: Obtiene un perfil por su ID
+      x-permiso-requerido: perfiles:leer
+      responses:
+        '200':
+          description: Perfil encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Perfiles]
+      operationId: actualizarPerfil
+      summary: Actualiza parcialmente un perfil
+      x-permiso-requerido: perfiles:editar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilUpdateRequest'
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Perfiles]
+      operationId: eliminarPerfil
+      summary: Elimina un perfil
+      x-permiso-requerido: perfiles:eliminar
+      responses:
+        '204':
+          description: Perfil eliminado (sin contenido)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token obtenido en /api/v1/auth/login. Se envía en el header
+        `Authorization: Bearer <token>`. Su contenido se describe en el esquema TokenClaims.
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      description: ID del recurso (formato ObjectID de MongoDB)
+      schema:
+        $ref: '#/components/schemas/ObjectId'
+    Pagina:
+      name: pagina
+      in: query
+      required: false
+      description: Número de página, partiendo en 1
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limite:
+      name: limite
+      in: query
+      required: false
+      description: Cantidad de elementos por página (máximo 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    # --- Basic types ---------------------------------------------------------
+    ObjectId:
+      type: string
+      description: Identificador de MongoDB (24 caracteres hexadecimales)
+      pattern: '^[0-9a-fA-F]{24}$'
+      examples:
+        - 654b9a9f2b8c9d0012345678
+
+    EstadoUsuario:
+      type: string
+      description: Estado de la cuenta. Un usuario bloqueado no puede iniciar sesión.
+      enum: [activo, bloqueado]
+
+    ErrorEstandar:
+      type: object
+      required: [codigo, mensaje]
+      properties:
+        codigo:
+          type: integer
+          description: Código HTTP del error
+          examples: [400]
+        mensaje:
+          type: string
+          description: Descripción breve del error
+          examples: [Datos de entrada inválidos.]
+        detalles:
+          type: string
+          description: Información adicional para corregir el error
+          examples: [El campo 'email' es obligatorio.]
+
+    Paginacion:
+      type: object
+      required: [pagina, limite, total, total_paginas]
+      properties:
+        pagina:
+          type: integer
+          examples: [1]
+        limite:
+          type: integer
+          examples: [20]
+        total:
+          type: integer
+          description: Cantidad total de elementos
+          examples: [57]
+        total_paginas:
+          type: integer
+          examples: [3]
+
+    EstadoSalud:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: string
+          examples: [ok]
+
+    # --- Authentication -------------------------------------------------------
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          examples: [ana@ejemplo.cl]
+        password:
+          type: string
+          format: password
+          minLength: 1
+          examples: [MiClaveSegura123]
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          examples: [8f3c2a91-6b7d-4e1f-9a0c-2d5e7f8b1c34]
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in, refresh_token]
+      properties:
+        access_token:
+          type: string
+          description: JWT firmado con RS256. Su contenido se describe en TokenClaims.
+          examples: [eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NTRiOWE5ZiJ9.firma]
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Segundos de validez del access token
+          examples: [900]
+        refresh_token:
+          type: string
+          description: Token opaco para pedir un nuevo access token en /auth/refresh
+          examples: [8f3c2a91-6b7d-4e1f-9a0c-2d5e7f8b1c34]
+
+    TokenClaims:
+      type: object
+      description: |
+        Contenido (payload) del access token.
+      required: [iss, sub, aud, exp, iat, email, roles, permisos]
+      properties:
+        iss:
+          type: string
+          description: Emisor del token
+          examples: [pingeso-identity-provider]
+        sub:
+          $ref: '#/components/schemas/ObjectId'
+        aud:
+          type: string
+          description: Audiencia del token
+          examples: [pingeso]
+        exp:
+          type: integer
+          description: Fecha de expiración (formato Unix) 
+          examples: [1793912345]
+        iat:
+          type: integer
+          description: Fecha de emisión (formato Unix)
+          examples: [1793911445]
+        email:
+          type: string
+          format: email
+          examples: [ana@ejemplo.cl]
+        roles:
+          type: array
+          description: Nombres de los roles del usuario
+          items:
+            type: string
+          examples:
+            - [booker]
+        permisos:
+          type: array
+          description: Unión de los permisos de todos sus roles
+          items:
+            type: string
+          examples:
+            - [perfiles:leer, perfiles:editar]
+
+    CambioPasswordRequest:
+      type: object
+      required: [password_actual, password_nueva]
+      properties:
+        password_actual:
+          type: string
+          format: password
+          minLength: 1
+        password_nueva:
+          $ref: '#/components/schemas/PasswordNueva'
+
+    PasswordNueva:
+      type: string
+      format: password
+      description: Entre 8 y 72 caracteres
+      minLength: 8
+      maxLength: 72
+      examples: [MiClaveSegura123]
+
+    Jwks:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
+
+    Jwk:
+      type: object
+      description: Clave pública RSA en formato JSON Web Key
+      required: [kty, use, kid, alg, n, e]
+      properties:
+        kty:
+          type: string
+          enum: [RSA]
+        use:
+          type: string
+          enum: [sig]
+        kid:
+          type: string
+          description: Identificador de la clave
+          examples: [clave-2026-11]
+        alg:
+          type: string
+          enum: [RS256]
+        n:
+          type: string
+          description: Módulo de la clave RSA (Base64URL)
+        e:
+          type: string
+          description: Exponente de la clave RSA (Base64URL)
+          examples: [AQAB]
+
+    # --- Users -----------------------------------------------------------------
+    UsuarioCreateRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          examples: [ana@ejemplo.cl]
+        password:
+          $ref: '#/components/schemas/PasswordNueva'
+        estado:
+          $ref: '#/components/schemas/EstadoUsuario'
+        roles:
+          type: array
+          description: IDs de los roles que tendrá el usuario
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ObjectId'
+
+    UsuarioUpdateRequest:
+      type: object
+      description: Solo se envían los campos que se quieren cambiar
+      minProperties: 1
+      properties:
+        email:
+          type: string
+          format: email
+        estado:
+          $ref: '#/components/schemas/EstadoUsuario'
+
+    AsignacionRolesRequest:
+      type: object
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          description: Lista completa de IDs de roles (reemplaza la anterior)
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ObjectId'
+
+    UsuarioResponse:
+      type: object
+      description: Datos públicos del usuario. 
+      required: [id, email, estado, roles, fecha_creacion, fecha_actualizacion]
+      properties:
+        id:
+          $ref: '#/components/schemas/ObjectId'
+        email:
+          type: string
+          format: email
+          examples: [ana@ejemplo.cl]
+        estado:
+          $ref: '#/components/schemas/EstadoUsuario'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolResumen'
+        ultimo_acceso:
+          type: [string, 'null']
+          format: date-time
+          description: Último inicio de sesión (null si nunca ha ingresado)
+          examples: ['2026-11-05T14:30:00Z']
+        fecha_creacion:
+          type: string
+          format: date-time
+          examples: ['2026-11-01T10:00:00Z']
+        fecha_actualizacion:
+          type: string
+          format: date-time
+          examples: ['2026-11-05T14:30:00Z']
+
+    UsuarioActual:
+      description: Usuario autenticado, con sus permisos efectivos
+      allOf:
+        - $ref: '#/components/schemas/UsuarioResponse'
+        - type: object
+          required: [permisos]
+          properties:
+            permisos:
+              type: array
+              items:
+                type: string
+              examples:
+                - [perfiles:leer, perfiles:editar]
+            perfil_id:
+              description: ID de su perfil (null si aún no tiene)
+              oneOf:
+                - $ref: '#/components/schemas/ObjectId'
+                - type: 'null'
+
+    UsuarioPaginado:
+      type: object
+      required: [datos, paginacion]
+      properties:
+        datos:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioResponse'
+        paginacion:
+          $ref: '#/components/schemas/Paginacion'
+
+    # --- Roles ---------------------------------------------------------------
+    RolRequest:
+      type: object
+      required: [nombre, permisos]
+      properties:
+        nombre:
+          type: string
+          description: Nombre único del rol, en minúsculas y sin espacios
+          pattern: '^[a-z0-9_]+$'
+          examples: [booker]
+        descripcion:
+          type: string
+          examples: [Selecciona y coordina talentos para los proyectos]
+        permisos:
+          type: array
+          description: Permisos con formato recurso:accion
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^[a-z0-9_]+:[a-z0-9_*]+$'
+          examples:
+            - [perfiles:leer, perfiles:editar]
+
+    RolResponse:
+      allOf:
+        - $ref: '#/components/schemas/RolRequest'
+        - type: object
+          required: [id, fecha_creacion, fecha_actualizacion]
+          properties:
+            id:
+              $ref: '#/components/schemas/ObjectId'
+            fecha_creacion:
+              type: string
+              format: date-time
+              examples: ['2026-11-01T10:00:00Z']
+            fecha_actualizacion:
+              type: string
+              format: date-time
+              examples: ['2026-11-05T14:30:00Z']
+
+    RolResumen:
+      type: object
+      required: [id, nombre]
+      properties:
+        id:
+          $ref: '#/components/schemas/ObjectId'
+        nombre:
+          type: string
+          examples: [booker]
+
+    # --- Profiles ------------------------------------------------------------
+    Atributos:
+      type: object
+      description: |
+        Campos libres que define cada cliente según sus necesidades.
+        Ejemplo para una agencia de modelos: estatura, color de ojos, disponibilidad.
+      additionalProperties: true
+      examples:
+        - estatura_cm: 172
+          color_ojos: verde
+          disponible: true
+
+    PerfilCreateRequest:
+      type: object
+      required: [usuario_id, nombre, apellido]
+      properties:
+        usuario_id:
+          $ref: '#/components/schemas/ObjectId'
+        nombre:
+          type: string
+          minLength: 1
+          examples: [Ana]
+        apellido:
+          type: string
+          minLength: 1
+          examples: [Pérez]
+        telefono:
+          type: string
+          examples: ['+56912345678']
+        foto_url:
+          type: string
+          format: uri
+          description: Enlace a la foto (almacenada en la Bóveda Documental, PT7)
+          examples: ['https://boveda.midominio.cl/archivos/654b9a9f2b8c9d0012345678']
+        atributos:
+          $ref: '#/components/schemas/Atributos'
+
+    PerfilUpdateRequest:
+      type: object
+      description: Solo se envían los campos que se quieren cambiar
+      minProperties: 1
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        apellido:
+          type: string
+          minLength: 1
+        telefono:
+          type: string
+        foto_url:
+          type: string
+          format: uri
+        atributos:
+          $ref: '#/components/schemas/Atributos'
+
+    PerfilResponse:
+      type: object
+      required: [id, usuario_id, nombre, apellido, atributos, fecha_creacion, fecha_actualizacion]
+      properties:
+        id:
+          $ref: '#/components/schemas/ObjectId'
+        usuario_id:
+          $ref: '#/components/schemas/ObjectId'
+        nombre:
+          type: string
+          examples: [Ana]
+        apellido:
+          type: string
+          examples: [Pérez]
+        telefono:
+          type: string
+          examples: ['+56912345678']
+        foto_url:
+          type: string
+          format: uri
+        atributos:
+          $ref: '#/components/schemas/Atributos'
+        fecha_creacion:
+          type: string
+          format: date-time
+          examples: ['2026-11-01T10:00:00Z']
+        fecha_actualizacion:
+          type: string
+          format: date-time
+          examples: ['2026-11-05T14:30:00Z']
+
+    PerfilPaginado:
+      type: object
+      required: [datos, paginacion]
+      properties:
+        datos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerfilResponse'
+        paginacion:
+          $ref: '#/components/schemas/Paginacion'
+
+  responses:
+    BadRequest:
+      description: Petición mal formada (JSON inválido, falta un campo o un valor no cumple el formato)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 400
+            mensaje: Datos de entrada inválidos.
+            detalles: El campo 'email' es obligatorio.
+    Unauthorized:
+      description: Falta el token, es inválido o expiró
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 401
+            mensaje: No autenticado.
+            detalles: El token no fue enviado o ya expiró.
+    Forbidden:
+      description: El token es válido pero no tiene el permiso requerido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 403
+            mensaje: Acceso denegado.
+            detalles: Se requiere el permiso 'usuarios:leer'.
+    NotFound:
+      description: El recurso con el ID indicado no existe
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 404
+            mensaje: Recurso no encontrado.
+            detalles: No existe un usuario con ID 654b9a9f2b8c9d0012345678.
+    Conflict:
+      description: La operación choca con datos existentes (por ejemplo, correo o nombre de rol repetido)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 409
+            mensaje: Conflicto con datos existentes.
+            detalles: Ya existe un usuario con el correo ana@ejemplo.cl.
+    InternalServerError:
+      description: Error interno del servidor (por ejemplo, pérdida de conexión con MongoDB)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEstandar'
+          example:
+            codigo: 500
+            mensaje: Error interno del servidor.
+            detalles: No fue posible conectar con la base de datos.
