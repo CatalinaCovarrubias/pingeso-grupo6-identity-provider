@@ -1,0 +1,42 @@
+name: CI
+
+# Run on every push to main and on every pull request
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test-and-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      # Download the repository code (full history helps SonarQube detect new code)
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Install the Go version required by the course
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.12'
+
+      # Run all tests and generate the coverage report
+      - name: Run tests
+        run: go test -coverprofile=coverage.out ./...
+
+      # Send code and coverage to SonarQube Cloud
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      # Scan dependencies and config files for HIGH/CRITICAL vulnerabilities
+      - name: Trivy scan
+        run: >
+          docker run --rm -v "${{ github.workspace }}:/src"
+          aquasec/trivy:0.76.1 fs
+          --scanners vuln,misconfig
+          --severity HIGH,CRITICAL
+          --exit-code 1
+          /src
