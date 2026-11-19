@@ -110,7 +110,9 @@ func levantarServidor(ctx context.Context) error {
 		logger.Info("señal recibida, cerrando el servidor")
 	}
 
-	ctxCierre, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+	// Se parte de ctx sin su cancelación: ctx ya fue cancelado por la señal,
+	// pero el cierre ordenado necesita su propio plazo de 10 segundos.
+	ctxCierre, cancelar := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancelar()
 	return servidor.Shutdown(ctxCierre)
 }
