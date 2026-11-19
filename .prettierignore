@@ -1,0 +1,4 @@
+# El contrato se genera con "pnpm codegen": no se formatea a mano
+contracts/openapi.yaml
+pnpm-lock.yaml
+coverage.out

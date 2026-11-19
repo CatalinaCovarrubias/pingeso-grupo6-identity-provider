@@ -1,0 +1,5 @@
+packages:
+  - "apps/*"
+
+# Versiones exactas compartidas (sin ^). Se completa al crear apps/web.
+catalog: {}
