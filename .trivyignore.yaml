@@ -1,0 +1,3 @@
+# Excepciones de Trivy. Cada una necesita CVE, motivo y fecha de revisión,
+# y debe estar aprobada por el jefe de proyecto. Sin excepciones por ahora.
+vulnerabilities: []

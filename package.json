@@ -1,0 +1,22 @@
+{
+  "name": "usuarios-roles",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": "22.22.0"
+  },
+  "scripts": {
+    "codegen": "cd apps/api && go run ./cmd/api openapi ../../contracts/openapi.yaml",
+    "verify": "prettier --check . && oxlint --deny-warnings --no-error-on-unmatched-pattern && pnpm verify:api",
+    "verify:api": "cd apps/api && go vet ./...",
+    "typecheck": "echo \"Sin frontend: no hay tipos TypeScript que revisar\"",
+    "test": "pnpm test:api",
+    "test:api": "cd apps/api && go test ./...",
+    "test:api:cobertura": "cd apps/api && go test -coverprofile=../../coverage.out ./..."
+  },
+  "devDependencies": {
+    "lefthook": "2.1.10",
+    "oxlint": "1.75.0",
+    "prettier": "3.9.6"
+  }
+}
