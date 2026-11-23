@@ -38,6 +38,11 @@ services:
       DATABASE_URL: ${DATABASE_URL:?falta DATABASE_URL en .env}
       FRONTEND_URL: ${FRONTEND_URL:?falta FRONTEND_URL en .env}
       TZ: ${TZ:?falta TZ en .env}
+      JWT_EMISOR: ${JWT_EMISOR:?falta JWT_EMISOR en .env}
+      JWT_AUDIENCIA: ${JWT_AUDIENCIA:?falta JWT_AUDIENCIA en .env}
+      JWT_TTL: ${JWT_TTL:?falta JWT_TTL en .env}
+      # Vacía en dev: la API genera una llave en memoria. En test y prod, ruta al PEM montado.
+      JWT_LLAVE_PRIVADA_ARCHIVO: ${JWT_LLAVE_PRIVADA_ARCHIVO:-}
     ports:
       - "127.0.0.1:5161:8080"
     depends_on:

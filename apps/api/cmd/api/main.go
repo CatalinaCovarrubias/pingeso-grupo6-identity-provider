@@ -21,9 +21,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/api"
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/config"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/store/memoria"
 )
 
 // version se reemplaza al compilar con -ldflags "-X main.version=<sha>".
@@ -53,7 +57,8 @@ func ejecutar(ctx context.Context, args []string, salida io.Writer) error {
 
 // imprimirContrato escribe el contrato OpenAPI generado desde los structs de internal/api.
 func imprimirContrato(salida io.Writer) error {
-	_, humaAPI := api.NuevoServidor(api.Dependencias{PublicarDocs: true})
+	// El contrato incluye POST /api/dev/tokens (etiqueta Desarrollo), aunque en test y prod no exista.
+	_, humaAPI := api.NuevoServidor(api.Dependencias{PublicarDocs: true, RegistrarDev: true})
 	contrato, err := humaAPI.OpenAPI().YAML()
 	if err != nil {
 		return fmt.Errorf("no se pudo generar el contrato: %w", err)
@@ -82,13 +87,25 @@ func levantarServidor(ctx context.Context) error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("servicio", "usuarios-roles", "version", version)
 	slog.SetDefault(logger)
 
+	llave, err := obtenerLlave(cfg, logger)
+	if err != nil {
+		return err
+	}
+	logger.Info("llave de firma JWT lista", "kid", llave.Kid())
+	emisor := tokens.NuevoEmisor(llave, cfg.JWTEmisor, cfg.JWTAudiencia, cfg.JWTTTL)
+
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("DATABASE_URL inválida: %w", err)
 	}
 	defer pool.Close()
 
-	manejador, _ := api.NuevoServidor(api.Dependencias{BD: pool, PublicarDocs: !cfg.EsProduccion()})
+	dep, err := armarDependencias(ctx, cfg, emisor, logger)
+	if err != nil {
+		return err
+	}
+	dep.BD = pool
+	manejador, _ := api.NuevoServidor(dep)
 	servidor := &http.Server{
 		Addr:              ":" + cfg.Puerto,
 		Handler:           manejador,
@@ -115,4 +132,47 @@ func levantarServidor(ctx context.Context) error {
 	ctxCierre, cancelar := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancelar()
 	return servidor.Shutdown(ctxCierre)
+}
+
+// armarDependencias conecta los services con el store en memoria del Hito 1.
+// El seed de desarrollo solo se carga en dev y test: en prod el almacén parte vacío.
+func armarDependencias(ctx context.Context, cfg config.Configuracion, emisor *tokens.Emisor, logger *slog.Logger) (api.Dependencias, error) {
+	almacen := memoria.Nueva()
+	if cfg.EsProduccion() {
+		logger.Warn("store en memoria sin datos seed: en prod nadie puede iniciar sesión hasta la Tanda 4")
+	} else if err := memoria.CargarSeed(ctx, almacen, bcrypt.DefaultCost); err != nil {
+		return api.Dependencias{}, err
+	}
+
+	sesiones, err := service.NuevoSesiones(almacen, almacen, emisor, bcrypt.DefaultCost, time.Now)
+	if err != nil {
+		return api.Dependencias{}, err
+	}
+	return api.Dependencias{
+		PublicarDocs: !cfg.EsProduccion(),
+		RegistrarDev: cfg.EsDesarrollo(),
+		Sesiones:     sesiones,
+		Desarrollo:   sesiones,
+		Usuarios:     service.NuevoUsuarios(almacen, almacen, bcrypt.DefaultCost, time.Now),
+		Roles:        service.NuevoRoles(almacen, almacen, time.Now),
+		Perfiles:     service.NuevoPerfiles(almacen, almacen, time.Now),
+	}, nil
+}
+
+// obtenerLlave carga la llave de firma desde JWT_LLAVE_PRIVADA_ARCHIVO. Solo en dev,
+// si la variable falta, genera una llave en memoria y lo avisa en el log.
+func obtenerLlave(cfg config.Configuracion, logger *slog.Logger) (*tokens.Llave, error) {
+	if cfg.JWTLlavePrivadaArchivo != "" {
+		return tokens.CargarLlave(cfg.JWTLlavePrivadaArchivo)
+	}
+	if !cfg.EsDesarrollo() {
+		return nil, errors.New("JWT_LLAVE_PRIVADA_ARCHIVO es obligatoria fuera de dev")
+	}
+	llave, err := tokens.GenerarLlave()
+	if err != nil {
+		return nil, err
+	}
+	logger.Warn("JWT_LLAVE_PRIVADA_ARCHIVO no está definida: se generó una llave temporal en memoria; "+
+		"los tokens dejan de valer al reiniciar el servicio", "kid", llave.Kid())
+	return llave, nil
 }
