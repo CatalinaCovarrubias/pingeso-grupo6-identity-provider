@@ -37,8 +37,28 @@ func TestEscribirContratoEnArchivo(t *testing.T) {
 	}
 }
 
+// variablesDelServicio son todas las variables que lee config.Cargar.
+var variablesDelServicio = []string{
+	"API_PORT", "API_ENV", "DATABASE_URL", "FRONTEND_URL", "TZ",
+	"JWT_EMISOR", "JWT_AUDIENCIA", "JWT_TTL", "JWT_LLAVE_PRIVADA_ARCHIVO",
+}
+
+// definirEntornoValido deja una configuración completa de pruebas, con API_ENV=test.
+func definirEntornoValido(t *testing.T) {
+	t.Helper()
+	t.Setenv("API_PORT", "0") // puerto 0: el sistema elige uno libre
+	t.Setenv("API_ENV", "test")
+	t.Setenv("DATABASE_URL", "postgres://usuario:clave@localhost:1/base")
+	t.Setenv("FRONTEND_URL", "http://localhost:5160")
+	t.Setenv("TZ", "America/Santiago")
+	t.Setenv("JWT_EMISOR", "pingeso-identidad")
+	t.Setenv("JWT_AUDIENCIA", "pingeso")
+	t.Setenv("JWT_TTL", "15m")
+	t.Setenv("JWT_LLAVE_PRIVADA_ARCHIVO", escribirLlaveDePrueba(t))
+}
+
 func TestLevantarServidorFallaSinConfiguracion(t *testing.T) {
-	for _, variable := range []string{"API_PORT", "API_ENV", "DATABASE_URL", "FRONTEND_URL", "TZ"} {
+	for _, variable := range variablesDelServicio {
 		t.Setenv(variable, "")
 	}
 	if err := ejecutar(context.Background(), nil, &bytes.Buffer{}); err == nil {
@@ -47,11 +67,8 @@ func TestLevantarServidorFallaSinConfiguracion(t *testing.T) {
 }
 
 func TestLevantarServidorFallaConDatabaseURLInvalida(t *testing.T) {
-	t.Setenv("API_PORT", "0")
-	t.Setenv("API_ENV", "test")
+	definirEntornoValido(t)
 	t.Setenv("DATABASE_URL", "esto-no-es-una-url://")
-	t.Setenv("FRONTEND_URL", "http://localhost:5160")
-	t.Setenv("TZ", "America/Santiago")
 
 	if err := ejecutar(context.Background(), nil, &bytes.Buffer{}); err == nil {
 		t.Fatal("se esperaba error por DATABASE_URL inválida")
@@ -59,11 +76,7 @@ func TestLevantarServidorFallaConDatabaseURLInvalida(t *testing.T) {
 }
 
 func TestLevantarServidorSeCierraAlCancelar(t *testing.T) {
-	t.Setenv("API_PORT", "0") // puerto 0: el sistema elige uno libre
-	t.Setenv("API_ENV", "test")
-	t.Setenv("DATABASE_URL", "postgres://usuario:clave@localhost:1/base")
-	t.Setenv("FRONTEND_URL", "http://localhost:5160")
-	t.Setenv("TZ", "America/Santiago")
+	definirEntornoValido(t)
 
 	ctx, cancelar := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancelar()

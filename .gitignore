@@ -16,3 +16,7 @@ dist/
 
 # SonarQube
 .scannerwork/
+
+# Llaves de firma JWT: nunca se suben
+.secretos/
+*.pem
