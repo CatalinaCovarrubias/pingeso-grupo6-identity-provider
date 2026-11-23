@@ -9,6 +9,7 @@ JWT que validan los demás servicios. Sigue el documento **DAS — Desarrollo de
 - SonarQube: https://sonarcloud.io/project/overview?id=CatalinaCovarrubias_pingeso-grupo6-identity-provider
 - Contrato: [`contracts/openapi.yaml`](contracts/openapi.yaml)
 - Modos de falla: [`docs/modos-de-falla.md`](docs/modos-de-falla.md)
+- JWT de prueba para los otros grupos: [`docs/jwt-de-prueba.md`](docs/jwt-de-prueba.md)
 
 ## Puertos locales (servicio N = 6)
 
