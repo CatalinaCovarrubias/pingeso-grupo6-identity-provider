@@ -2,3 +2,13 @@
 contracts/openapi.yaml
 pnpm-lock.yaml
 coverage.out
+
+# Frontend: archivos generados (no se editan a mano)
+apps/web/src/api/esquema.d.ts
+apps/web/src/mocks/ejemplos.gen.ts
+apps/web/src/components/ui/
+apps/web/public/mockServiceWorker.js
+apps/web/coverage/
+apps/web/dist/
+apps/web/test-results/
+apps/web/playwright-report/

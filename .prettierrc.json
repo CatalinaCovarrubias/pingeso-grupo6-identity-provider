@@ -1,4 +1,7 @@
 {
   "semi": false,
-  "printWidth": 90
+  "printWidth": 90,
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "./apps/web/src/estilos/tema.css",
+  "tailwindFunctions": ["cva", "cn"]
 }

@@ -20,3 +20,13 @@ dist/
 # Llaves de firma JWT: nunca se suben
 .secretos/
 *.pem
+
+# Frontend: reportes de pruebas y cobertura
+apps/web/coverage/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+
+# Variables públicas del frontend (no son secretos: terminan en el bundle)
+!apps/web/.env.development
+!apps/web/.env.backend

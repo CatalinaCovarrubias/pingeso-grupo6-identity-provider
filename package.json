@@ -6,17 +6,25 @@
     "node": "22.22.0"
   },
   "scripts": {
-    "codegen": "cd apps/api && go run ./cmd/api openapi ../../contracts/openapi.yaml",
-    "verify": "prettier --check . && oxlint --deny-warnings --no-error-on-unmatched-pattern && pnpm verify:api",
+    "codegen": "pnpm codegen:api && pnpm codegen:web",
+    "codegen:api": "cd apps/api && go run ./cmd/api openapi ../../contracts/openapi.yaml",
+    "codegen:web": "pnpm --filter web codegen",
+    "verify": "prettier --check . && oxlint --deny-warnings --no-error-on-unmatched-pattern && pnpm verify:api && pnpm verify:spa",
     "verify:api": "cd apps/api && go vet ./...",
-    "typecheck": "echo \"Sin frontend: no hay tipos TypeScript que revisar\"",
-    "test": "pnpm test:api",
+    "verify:spa": "pnpm --filter web verify:spa",
+    "typecheck": "pnpm --filter web typecheck",
+    "build:web": "pnpm --filter web build",
+    "test": "pnpm test:web && pnpm test:api && pnpm test:spa",
+    "test:web": "pnpm --filter web test",
+    "test:e2e:web": "pnpm --filter web test:e2e",
+    "test:spa": "pnpm --filter web test:spa",
     "test:api": "cd apps/api && go test ./...",
     "test:api:cobertura": "cd apps/api && go test -coverprofile=../../coverage.out ./..."
   },
   "devDependencies": {
     "lefthook": "2.1.10",
     "oxlint": "1.75.0",
-    "prettier": "3.9.6"
+    "prettier": "3.9.6",
+    "prettier-plugin-tailwindcss": "0.8.1"
   }
 }
