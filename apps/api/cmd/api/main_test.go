@@ -16,7 +16,11 @@ func TestImprimirContrato(t *testing.T) {
 		t.Fatalf("no se esperaba error: %v", err)
 	}
 	contrato := salida.String()
-	for _, esperado := range []string{"openapi: 3.1", "/healthz", "/readyz"} {
+	for _, esperado := range []string{
+		"openapi: 3.1", "/healthz", "/readyz", "/api/sesiones", "/.well-known/jwks.json",
+		"/api/usuarios/{id}/roles", "/api/usuarios/{id}/perfil", "/api/roles/{id}", "/api/permisos",
+		"x-permiso: usuarios:administrar", "cookieSesion",
+	} {
 		if !strings.Contains(contrato, esperado) {
 			t.Fatalf("el contrato no contiene %q", esperado)
 		}

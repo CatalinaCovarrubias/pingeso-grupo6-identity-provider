@@ -21,10 +21,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/api"
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/config"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service"
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/store/memoria"
 )
 
 // version se reemplaza al compilar con -ldflags "-X main.version=<sha>".
@@ -88,6 +91,7 @@ func levantarServidor(ctx context.Context) error {
 		return err
 	}
 	logger.Info("llave de firma JWT lista", "kid", llave.Kid())
+	emisor := tokens.NuevoEmisor(llave, cfg.JWTEmisor, cfg.JWTAudiencia, cfg.JWTTTL)
 
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -95,7 +99,12 @@ func levantarServidor(ctx context.Context) error {
 	}
 	defer pool.Close()
 
-	manejador, _ := api.NuevoServidor(api.Dependencias{BD: pool, PublicarDocs: !cfg.EsProduccion()})
+	dep, err := armarDependencias(ctx, cfg, emisor, logger)
+	if err != nil {
+		return err
+	}
+	dep.BD = pool
+	manejador, _ := api.NuevoServidor(dep)
 	servidor := &http.Server{
 		Addr:              ":" + cfg.Puerto,
 		Handler:           manejador,
@@ -122,6 +131,31 @@ func levantarServidor(ctx context.Context) error {
 	ctxCierre, cancelar := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancelar()
 	return servidor.Shutdown(ctxCierre)
+}
+
+// armarDependencias conecta los services con el store en memoria del Hito 1.
+// El seed de desarrollo solo se carga en dev y test: en prod el almacén parte vacío.
+func armarDependencias(ctx context.Context, cfg config.Configuracion, emisor *tokens.Emisor, logger *slog.Logger) (api.Dependencias, error) {
+	almacen := memoria.Nueva()
+	if cfg.EsProduccion() {
+		logger.Warn("store en memoria sin datos seed: en prod nadie puede iniciar sesión hasta la Tanda 4")
+	} else if err := memoria.CargarSeed(ctx, almacen, bcrypt.DefaultCost); err != nil {
+		return api.Dependencias{}, err
+	}
+
+	sesiones, err := service.NuevoSesiones(almacen, almacen, emisor, bcrypt.DefaultCost, time.Now)
+	if err != nil {
+		return api.Dependencias{}, err
+	}
+	return api.Dependencias{
+		PublicarDocs: !cfg.EsProduccion(),
+		RegistrarDev: cfg.EsDesarrollo(),
+		Sesiones:     sesiones,
+		Desarrollo:   sesiones,
+		Usuarios:     service.NuevoUsuarios(almacen, almacen, bcrypt.DefaultCost, time.Now),
+		Roles:        service.NuevoRoles(almacen, almacen, time.Now),
+		Perfiles:     service.NuevoPerfiles(almacen, almacen, time.Now),
+	}, nil
 }
 
 // obtenerLlave carga la llave de firma desde JWT_LLAVE_PRIVADA_ARCHIVO. Solo en dev,

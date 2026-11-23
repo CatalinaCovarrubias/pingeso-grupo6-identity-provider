@@ -20,26 +20,26 @@ type SaludRespuesta struct {
 
 // registrarSalud agrega los endpoints de salud, que no requieren autenticación.
 func registrarSalud(api huma.API, bd VerificadorBD) {
-	huma.Register(api, huma.Operation{
+	huma.Register(api, publica(huma.Operation{
 		OperationID: "verificarVida",
 		Method:      http.MethodGet,
 		Path:        "/healthz",
 		Summary:     "Indica si el proceso está vivo",
 		Tags:        []string{"Salud"},
-	}, func(ctx context.Context, _ *struct{}) (*SaludRespuesta, error) {
+	}), func(ctx context.Context, _ *struct{}) (*SaludRespuesta, error) {
 		resp := &SaludRespuesta{}
 		resp.Body.Estado = "ok"
 		return resp, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, publica(huma.Operation{
 		OperationID: "verificarDisponibilidad",
 		Method:      http.MethodGet,
 		Path:        "/readyz",
 		Summary:     "Indica si el servicio puede atender: responde 200 solo si PostgreSQL contesta",
 		Tags:        []string{"Salud"},
 		Errors:      []int{http.StatusServiceUnavailable},
-	}, func(ctx context.Context, _ *struct{}) (*SaludRespuesta, error) {
+	}), func(ctx context.Context, _ *struct{}) (*SaludRespuesta, error) {
 		if bd == nil {
 			return nil, huma.Error503ServiceUnavailable("la base de datos no está configurada")
 		}
