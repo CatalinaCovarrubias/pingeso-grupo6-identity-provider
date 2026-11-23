@@ -38,8 +38,18 @@ jobs:
           else
             echo "main todavía no tiene contrato publicado: no hay contra qué comparar"
           fi
+      - run: pnpm typecheck
+      - run: pnpm audit --audit-level high
       # Mientras no existan los e2e (Hito 2), la cobertura sale de las pruebas de Go
       - run: pnpm test:api:cobertura
+      # Pruebas del frontend con cobertura lcov (apps/web/coverage/lcov.info) y del spa-server
+      - run: pnpm test:web
+      - run: pnpm test:spa
+      - run: pnpm build:web
+      - name: prueba de humo del frontend (Playwright, chromium)
+        run: |
+          pnpm --filter web exec playwright install --with-deps chromium
+          pnpm test:e2e:web
       - uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -63,6 +73,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_VERSION: 8.30.1
       - run: cd apps/api && go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
+      - run: cd apps/web/spa-server && go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
       - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0 (hadolint v2.15.1)
         with: { recursive: true, failure-threshold: error }
       - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
@@ -80,12 +91,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build --pull -f apps/api/Dockerfile --build-arg VERSION=${GITHUB_SHA::7} -t api:ci .
-      # Agregar el build y el escaneo de web:ci cuando exista apps/web
+      - run: docker build --pull -f apps/web/Dockerfile --build-arg VERSION=${GITHUB_SHA::7} -t web:ci .
       - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           {
             version: "${{ env.TRIVY_VERSION }}",
             image-ref: api:ci,
+            severity: "HIGH,CRITICAL",
+            ignore-unfixed: true,
+            exit-code: "1",
+          }
+      - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          {
+            version: "${{ env.TRIVY_VERSION }}",
+            image-ref: web:ci,
             severity: "HIGH,CRITICAL",
             ignore-unfixed: true,
             exit-code: "1",
