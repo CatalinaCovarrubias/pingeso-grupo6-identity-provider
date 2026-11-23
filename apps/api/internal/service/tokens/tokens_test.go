@@ -67,6 +67,23 @@ func TestEmitirYValidar(t *testing.T) {
 	}
 }
 
+func TestEmitirConDuracion(t *testing.T) {
+	e := emisorDePrueba(t)
+	token, claims, err := e.EmitirConDuracion("sujeto", nil, nil, 2*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !claims.ExpiresAt.Equal(instante.Add(2 * time.Hour)) {
+		t.Fatalf("exp inesperado: %v", claims.ExpiresAt)
+	}
+	if _, err := e.Validar(token); err != nil {
+		t.Fatalf("un token con otra duración debe validar: %v", err)
+	}
+	if _, _, err := e.EmitirConDuracion("sujeto", nil, nil, 0); err == nil {
+		t.Fatal("una duración cero debe fallar")
+	}
+}
+
 func TestEmitirSinRolesUsaListasVacias(t *testing.T) {
 	e := emisorDePrueba(t)
 	token, _, err := e.Emitir("sujeto", nil, nil)

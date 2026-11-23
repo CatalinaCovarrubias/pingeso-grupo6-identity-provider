@@ -51,15 +51,24 @@ func (e *Emisor) TTL() time.Duration {
 	return e.ttl
 }
 
-// Emitir firma un token para el sujeto con los roles y permisos indicados.
+// Emitir firma un token para el sujeto con los roles y permisos indicados, con la duración configurada.
 func (e *Emisor) Emitir(sujeto string, roles, permisos []string) (string, Claims, error) {
+	return e.EmitirConDuracion(sujeto, roles, permisos, e.ttl)
+}
+
+// EmitirConDuracion firma un token con una duración distinta de la configurada.
+// Solo lo usan los tokens de prueba de desarrollo; el service acota la duración.
+func (e *Emisor) EmitirConDuracion(sujeto string, roles, permisos []string, duracion time.Duration) (string, Claims, error) {
+	if duracion <= 0 {
+		return "", Claims{}, errors.New("la duración del token debe ser positiva")
+	}
 	ahora := e.ahora()
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    e.emisor,
 			Subject:   sujeto,
 			Audience:  jwt.ClaimStrings{e.audiencia},
-			ExpiresAt: jwt.NewNumericDate(ahora.Add(e.ttl)),
+			ExpiresAt: jwt.NewNumericDate(ahora.Add(duracion)),
 			IssuedAt:  jwt.NewNumericDate(ahora),
 			NotBefore: jwt.NewNumericDate(ahora),
 			ID:        uuid.NewString(),

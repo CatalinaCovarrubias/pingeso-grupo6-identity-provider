@@ -16,6 +16,8 @@ type SolicitudTokenPrueba struct {
 	// PermisosExtra permite a otros grupos probar sus propios permisos.
 	PermisosExtra []CodigoPermiso `json:"permisos_extra,omitempty" maxItems:"50" uniqueItems:"true" doc:"Permisos adicionales, por ejemplo de otro servicio"`
 	UsuarioID     *string         `json:"usuario_id,omitempty" format:"uuid" example:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" doc:"Valor de sub. Si falta, se inventa un UUID"`
+	// Duracion admite minutos (1m a 1440m) u horas (1h a 24h). El patrón acota el máximo en el contrato.
+	Duracion *string `json:"duracion,omitempty" pattern:"^(([1-9]|1[0-9]|2[0-4])h|([1-9][0-9]{0,2}|1[0-3][0-9]{2}|14[0-3][0-9]|1440)m)$" patternDescription:"minutos (1m a 1440m) u horas (1h a 24h)" example:"2h" doc:"Duración del token. Por defecto 15m (JWT_TTL); máximo 24h"`
 }
 
 // ClaimsToken es el contenido del JWT emitido.
@@ -63,6 +65,10 @@ func registrarDesarrollo(api huma.API, s ServicioDesarrollo) {
 		if in.Body.UsuarioID != nil {
 			id := aUUID(*in.Body.UsuarioID)
 			sol.UsuarioID = &id
+		}
+		if in.Body.Duracion != nil {
+			// El contrato ya validó el formato; un valor ilegible deja 0 y se usa JWT_TTL.
+			sol.Duracion, _ = time.ParseDuration(*in.Body.Duracion)
 		}
 		emitido, err := s.EmitirTokenPrueba(ctx, sol)
 		if err != nil {

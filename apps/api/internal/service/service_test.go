@@ -213,6 +213,24 @@ func TestEmitirTokenPrueba(t *testing.T) {
 	esperar(t, err, service.ErrValidacion)
 }
 
+func TestTokenPruebaConDuracion(t *testing.T) {
+	e := nuevoEntorno(t)
+	ctx := context.Background()
+
+	porDefecto, err := e.sesiones.EmitirTokenPrueba(ctx, service.SolicitudTokenPrueba{})
+	if err != nil || !porDefecto.ExpiraEn.Equal(instante.Add(15*time.Minute)) {
+		t.Fatalf("sin duración debe usar JWT_TTL: %v, %v", porDefecto.ExpiraEn, err)
+	}
+	maximo, err := e.sesiones.EmitirTokenPrueba(ctx, service.SolicitudTokenPrueba{Duracion: 24 * time.Hour})
+	if err != nil || !maximo.ExpiraEn.Equal(instante.Add(24*time.Hour)) {
+		t.Fatalf("24 h debe aceptarse: %v, %v", maximo.ExpiraEn, err)
+	}
+	for _, d := range []time.Duration{24*time.Hour + time.Minute, -time.Minute} {
+		_, err := e.sesiones.EmitirTokenPrueba(ctx, service.SolicitudTokenPrueba{Duracion: d})
+		esperar(t, err, service.ErrValidacion)
+	}
+}
+
 func TestJWKSDelService(t *testing.T) {
 	e := nuevoEntorno(t)
 	if llaves := e.sesiones.JWKS(); len(llaves) != 1 || llaves[0].Kid != llave.Kid() {

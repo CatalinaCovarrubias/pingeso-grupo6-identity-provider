@@ -35,6 +35,30 @@ func TestTokenDePruebaSirveComoBearer(t *testing.T) {
 	s.llamar(peticion{metodo: http.MethodGet, ruta: "/api/sesiones/actual", token: token}).esperar(http.StatusOK)
 }
 
+func TestTokenDePruebaConDuracion(t *testing.T) {
+	s := nuevoServidorPrueba(t, opcionesServidor{registrarDev: true})
+	vigencia := func(cuerpo map[string]any) float64 {
+		t.Helper()
+		claims := s.llamar(peticion{metodo: http.MethodPost, ruta: "/api/dev/tokens", cuerpo: cuerpo}).
+			esperar(http.StatusOK).json()["claims"].(map[string]any)
+		return claims["exp"].(float64) - claims["iat"].(float64)
+	}
+	casos := map[string]float64{"": 900, "1m": 60, "2h": 7200, "24h": 86400, "1440m": 86400, "90m": 5400}
+	for duracion, segundos := range casos {
+		cuerpo := map[string]any{}
+		if duracion != "" {
+			cuerpo["duracion"] = duracion
+		}
+		if got := vigencia(cuerpo); got != segundos {
+			t.Errorf("duracion %q: se esperaban %v s, llegaron %v", duracion, segundos, got)
+		}
+	}
+	for _, invalida := range []string{"25h", "1441m", "0m", "0h", "15", "1d", "15s", "-1h", "2h30m"} {
+		s.llamar(peticion{metodo: http.MethodPost, ruta: "/api/dev/tokens", cuerpo: map[string]any{"duracion": invalida}}).
+			esperar(http.StatusUnprocessableEntity)
+	}
+}
+
 func TestTokenDePruebaValida(t *testing.T) {
 	s := nuevoServidorPrueba(t, opcionesServidor{registrarDev: true})
 	for _, cuerpo := range []map[string]any{

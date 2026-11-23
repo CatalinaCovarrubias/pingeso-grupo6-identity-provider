@@ -150,14 +150,26 @@ func (s *Sesiones) JWKS() []tokens.JWK {
 
 // SolicitudTokenPrueba pide un token de desarrollo.
 type SolicitudTokenPrueba struct {
-	Roles         []string   // nombres de roles existentes
-	PermisosExtra []string   // permisos de otros servicios, con formato <recurso>:<accion>
-	UsuarioID     *uuid.UUID // si falta, se inventa uno
+	Roles         []string      // nombres de roles existentes
+	PermisosExtra []string      // permisos de otros servicios, con formato <recurso>:<accion>
+	UsuarioID     *uuid.UUID    // si falta, se inventa uno
+	Duracion      time.Duration // si es cero, se usa JWT_TTL; máximo DuracionMaximaPrueba
 }
+
+// DuracionMaximaPrueba es lo más que puede durar un token de prueba.
+const DuracionMaximaPrueba = 24 * time.Hour
 
 // EmitirTokenPrueba emite un token con los roles pedidos más permisos extra.
 // Solo se expone con API_ENV=dev.
 func (s *Sesiones) EmitirTokenPrueba(ctx context.Context, sol SolicitudTokenPrueba) (TokenEmitido, error) {
+	duracion := sol.Duracion
+	if duracion == 0 {
+		duracion = s.emisor.TTL()
+	}
+	if duracion < 0 || duracion > DuracionMaximaPrueba {
+		return TokenEmitido{}, nuevoError(ErrValidacion, "La duración debe ser positiva y de 24 h como máximo")
+	}
+
 	var roles []Rol
 	for _, nombre := range sol.Roles {
 		r, err := s.roles.BuscarRolPorNombre(ctx, nombre)
@@ -179,11 +191,15 @@ func (s *Sesiones) EmitirTokenPrueba(ctx context.Context, sol SolicitudTokenPrue
 	if sol.UsuarioID != nil {
 		id = *sol.UsuarioID
 	}
-	return s.emitir(id, unicosOrdenados(nombres(roles)), permisos)
+	return s.emitirConDuracion(id, unicosOrdenados(nombres(roles)), permisos, duracion)
 }
 
 func (s *Sesiones) emitir(id uuid.UUID, roles, permisos []string) (TokenEmitido, error) {
-	token, claims, err := s.emisor.Emitir(id.String(), roles, permisos)
+	return s.emitirConDuracion(id, roles, permisos, s.emisor.TTL())
+}
+
+func (s *Sesiones) emitirConDuracion(id uuid.UUID, roles, permisos []string, duracion time.Duration) (TokenEmitido, error) {
+	token, claims, err := s.emisor.EmitirConDuracion(id.String(), roles, permisos, duracion)
 	if err != nil {
 		return TokenEmitido{}, err
 	}

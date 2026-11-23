@@ -82,15 +82,19 @@ para que lo uses en `Authorization: Bearer`. Acepta los roles seed y, además,
 
 ```bash
 curl -s -H 'Content-Type: application/json' \
-  -d '{"roles":["operador"],"permisos_extra":["reservas:operar"]}' \
+  -d '{"roles":["operador"],"permisos_extra":["reservas:operar"],"duracion":"8h"}' \
   http://localhost:5161/api/dev/tokens
 ```
 
-| Campo            | Obligatorio | Qué hace                                                           |
-| ---------------- | ----------- | ------------------------------------------------------------------ |
-| `roles`          | no          | Nombres de roles existentes. Sus permisos entran al token          |
-| `permisos_extra` | no          | Permisos adicionales con formato `<recurso>:<accion>` (minúsculas) |
-| `usuario_id`     | no          | UUID que irá en `sub`. Si falta, se inventa uno                    |
+| Campo            | Obligatorio | Qué hace                                                                                                                    |
+| ---------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `roles`          | no          | Nombres de roles existentes. Sus permisos entran al token                                                                   |
+| `permisos_extra` | no          | Permisos adicionales con formato `<recurso>:<accion>` (minúsculas)                                                          |
+| `usuario_id`     | no          | UUID que irá en `sub`. Si falta, se inventa uno                                                                             |
+| `duracion`       | no          | Cuánto dura el token: minutos (`1m` a `1440m`) u horas (`1h` a `24h`). Por defecto `15m`. Otro formato o más de 24 h da 422 |
+
+Una `duracion` larga sirve para no pedir un token cada 15 minutos mientras desarrollas. Aun
+así, el token deja de valer si el servicio se reinicia con una llave temporal (sección 1).
 
 Un token con un `usuario_id` inventado sirve para tu servicio. En cambio,
 `GET /api/sesiones/actual` lo rechaza con 401, porque ese usuario no existe aquí. Si necesitas
@@ -133,7 +137,10 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5161/api/sesiones/actual
 
 - `sub` es el UUID del usuario. Úsalo como referencia al usuario en tus datos.
 - `aud` es un arreglo con un solo valor.
-- El token dura 15 minutos (`JWT_TTL`). No hay refresh real todavía.
+- El token del login dura 15 minutos (`JWT_TTL`); los de prueba, lo que pidas en `duracion`
+  (hasta 24 h). No hay refresh real todavía.
+- El token no trae el correo ni otros datos personales. Si los necesitas, pídelos a
+  `GET /api/sesiones/actual` con el mismo token.
 - `permisos` es la unión de los permisos de sus roles. **Autoriza siempre por permiso, no por
   nombre de rol**: los roles los configura cada producto.
 - El `kid` cambia cuando cambia la llave. No lo copies fijo en tu código.
