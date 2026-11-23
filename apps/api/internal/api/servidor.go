@@ -81,6 +81,9 @@ func NuevoServidor(dep Dependencias) (http.Handler, huma.API) {
 	registrarUsuarios(api, dep.Usuarios)
 	registrarRoles(api, dep.Roles)
 	registrarPerfiles(api, dep.Perfiles)
+	if dep.RegistrarDev {
+		registrarDesarrollo(api, dep.Desarrollo)
+	}
 
 	return mux, api
 }

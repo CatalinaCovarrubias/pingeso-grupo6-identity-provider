@@ -57,7 +57,8 @@ func ejecutar(ctx context.Context, args []string, salida io.Writer) error {
 
 // imprimirContrato escribe el contrato OpenAPI generado desde los structs de internal/api.
 func imprimirContrato(salida io.Writer) error {
-	_, humaAPI := api.NuevoServidor(api.Dependencias{PublicarDocs: true})
+	// El contrato incluye POST /api/dev/tokens (etiqueta Desarrollo), aunque en test y prod no exista.
+	_, humaAPI := api.NuevoServidor(api.Dependencias{PublicarDocs: true, RegistrarDev: true})
 	contrato, err := humaAPI.OpenAPI().YAML()
 	if err != nil {
 		return fmt.Errorf("no se pudo generar el contrato: %w", err)
