@@ -31,10 +31,10 @@ export function AppDesarrollo() {
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <p className="text-base font-semibold text-foreground">
+          <h1 className="text-base font-semibold text-foreground">
             Identidad{" "}
             <span className="font-normal text-muted-foreground">· app de desarrollo</span>
-          </p>
+          </h1>
           <Insignia tono={usaMocks ? "advertencia" : "tinta"}>
             {usaMocks ? "Datos simulados (MSW)" : "Backend real"}
           </Insignia>

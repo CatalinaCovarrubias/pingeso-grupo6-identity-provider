@@ -24,7 +24,13 @@ export function Sobre({ abierto = false, className, children, ...props }: Props)
         aria-hidden="true"
         className={cn("patron-sobre h-10", abierto && "sobre-abierto")}
       />
-      <div className={cn("flex flex-col gap-6 p-6 sm:p-8", abierto && "contenido-sobre")}>
+      <div
+        className={cn(
+          "flex flex-col gap-6 p-6 sm:p-8",
+          // La solapa recogida deja aire propio: se compensa arriba.
+          abierto && "contenido-sobre pt-2 sm:pt-3",
+        )}
+      >
         {children}
       </div>
     </section>

@@ -78,7 +78,8 @@
   --accent-border: var(--tinta-100);
   --destructive: var(--peligro-600);
   --border: var(--neutro-200);
-  --input: var(--neutro-400);
+  /* Borde de inputs: al menos 3:1 contra la tarjeta (WCAG 1.4.11). */
+  --input: var(--neutro-500);
   --ring: var(--tinta-500);
 
   /* Estados: fondo tintado claro + texto oscuro del mismo tono. */
@@ -234,6 +235,8 @@
 
 /* Sobre abierto (sesion-actual): la solapa con el patrón se recoge hacia arriba. */
 @utility sobre-abierto {
+  /* Sin el fondo tintado: la solapa recogida queda sobre la tarjeta, sin franja vacía. */
+  background-color: transparent;
   &::before {
     @starting-style {
       transform: scaleY(1);

@@ -56,19 +56,19 @@ function VistaSesionActual(props: Omit<PropsSesionActual, "clienteConsultas">) {
         <output className="sr-only">Cargando tu sesión…</output>
         <div aria-hidden="true" className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <Skeleton className="h-7 w-3/4" />
-            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-7 w-3/4 motion-reduce:animate-none" />
+            <Skeleton className="h-5 w-1/2 motion-reduce:animate-none" />
           </div>
           <div className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-16 motion-reduce:animate-none" />
+            <Skeleton className="h-6 w-32 motion-reduce:animate-none" />
           </div>
           <div className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-4 w-20 motion-reduce:animate-none" />
+            <Skeleton className="h-5 w-40 motion-reduce:animate-none" />
+            <Skeleton className="h-5 w-36 motion-reduce:animate-none" />
           </div>
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full motion-reduce:animate-none" />
         </div>
       </Sobre>
     )
