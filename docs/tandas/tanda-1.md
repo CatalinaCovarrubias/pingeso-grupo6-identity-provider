@@ -20,6 +20,7 @@ validables con el JWKS. Así pueden avanzar en paralelo antes del 4 de diciembre
 | `feat(api): contrato y handlers de identidad`                   | Handlers Huma, middleware Bearer o cookie con `x-permiso`, errores RFC 9457 y `contracts/openapi.yaml` regenerado (versión 0.2.0)                                                                                              |
 | `feat(api): emisión de tokens de prueba en desarrollo`          | `POST /api/dev/tokens`, que solo existe con `API_ENV=dev`                                                                                                                                                                      |
 | `docs: guía de JWT de prueba y modos de falla`                  | `docs/jwt-de-prueba.md`, `docs/modos-de-falla.md` y enlace en el README                                                                                                                                                        |
+| `feat(api): duración opcional en los tokens de prueba`          | `duracion` en `POST /api/dev/tokens` (respuesta del equipo a la pregunta 3)                                                                                                                                                    |
 
 Archivos principales:
 
@@ -38,36 +39,36 @@ store. En la Tanda 4 se cambia `memoria` por PostgreSQL sin tocar los handlers.
 
 ## Endpoints
 
-| Método y ruta                          | Uso                                                                         | `x-permiso`                        | Estados                    |
-| -------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------- | -------------------------- |
-| `POST /api/sesiones`                   | Login: fija la cookie `sesion` y devuelve el usuario (sin token en el body) | `publico`                          | 200, 401, 403, 422         |
-| `GET /api/sesiones/actual`             | Usuario de la sesión con sus permisos y `expira_en`                         | `autenticado`                      | 200, 401                   |
-| `DELETE /api/sesiones/actual`          | Logout: borra la cookie                                                     | `autenticado`                      | 204, 401                   |
-| `POST /api/sesiones/actual/renovacion` | Renovación (simulada): token nuevo, mismos permisos                         | `autenticado`                      | 200, 401                   |
-| `PUT /api/sesiones/actual/contrasena`  | Cambio de contraseña (simulado): valida el formato y no cambia nada         | `autenticado`                      | 204, 401, 422              |
-| `GET /.well-known/jwks.json`           | Llaves públicas, `Cache-Control: public, max-age=300`                       | `publico`                          | 200                        |
-| `GET /api/usuarios`                    | Listado paginado (`pagina`, `limite` ≤ 100, `estado`, `correo`)             | `usuarios:administrar`             | 200, 401, 403, 422         |
-| `POST /api/usuarios`                   | Crear usuario activo                                                        | `usuarios:administrar`             | 201, 409, 422              |
-| `GET /api/usuarios/{id}`               | Detalle                                                                     | `usuarios:administrar`             | 200, 404, 422              |
-| `PATCH /api/usuarios/{id}`             | Cambiar correo o estado (`activo`, `bloqueado`, `inactivo`)                 | `usuarios:administrar`             | 200, 404, 409, 422         |
-| `DELETE /api/usuarios/{id}`            | Desactivar (estado `inactivo`)                                              | `usuarios:administrar`             | 204, 404, 409              |
-| `GET /api/usuarios/{id}/roles`         | Roles asignados                                                             | `roles:administrar`                | 200, 404                   |
-| `PUT /api/usuarios/{id}/roles`         | Reemplazar roles                                                            | `roles:administrar`                | 200, 404, 409, 422         |
-| `GET /api/usuarios/{id}/perfil`        | Perfil genérico                                                             | `perfiles:operar` o propio usuario | 200, 403, 404              |
-| `PUT /api/usuarios/{id}/perfil`        | Crear o reemplazar perfil                                                   | `perfiles:operar` o propio usuario | 200, 403, 404, 422         |
-| `GET /api/roles`                       | Listar roles                                                                | `roles:administrar`                | 200                        |
-| `POST /api/roles`                      | Crear rol con permisos `<recurso>:<accion>` de cualquier servicio           | `roles:administrar`                | 201, 409, 422              |
-| `GET /api/roles/{id}`                  | Detalle                                                                     | `roles:administrar`                | 200, 404                   |
-| `PATCH /api/roles/{id}`                | Cambiar descripción o permisos                                              | `roles:administrar`                | 200, 404, 409, 422         |
-| `DELETE /api/roles/{id}`               | Eliminar rol no asignado                                                    | `roles:administrar`                | 204, 404, 409              |
-| `GET /api/permisos`                    | Catálogo de permisos propios                                                | `autenticado`                      | 200, 401                   |
-| `POST /api/dev/tokens`                 | Token de prueba con `roles` y `permisos_extra` (solo `API_ENV=dev`)         | `publico` en dev                   | 200, 422; 404 fuera de dev |
-| `GET /healthz`, `GET /readyz`          | Salud (sin cambios)                                                         | `publico`                          | 200, 503                   |
+| Método y ruta                          | Uso                                                                             | `x-permiso`                        | Estados                    |
+| -------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- | -------------------------- |
+| `POST /api/sesiones`                   | Login: fija la cookie `sesion` y devuelve el usuario (sin token en el body)     | `publico`                          | 200, 401, 403, 422         |
+| `GET /api/sesiones/actual`             | Usuario de la sesión con sus permisos y `expira_en`                             | `autenticado`                      | 200, 401                   |
+| `DELETE /api/sesiones/actual`          | Logout: borra la cookie                                                         | `autenticado`                      | 204, 401                   |
+| `POST /api/sesiones/actual/renovacion` | Renovación (simulada): token nuevo, mismos permisos                             | `autenticado`                      | 200, 401                   |
+| `PUT /api/sesiones/actual/contrasena`  | Cambio de contraseña (simulado): valida el formato y no cambia nada             | `autenticado`                      | 204, 401, 422              |
+| `GET /.well-known/jwks.json`           | Llaves públicas, `Cache-Control: public, max-age=300`                           | `publico`                          | 200                        |
+| `GET /api/usuarios`                    | Listado paginado (`pagina`, `limite` ≤ 100, `estado`, `correo`)                 | `usuarios:administrar`             | 200, 401, 403, 422         |
+| `POST /api/usuarios`                   | Crear usuario activo                                                            | `usuarios:administrar`             | 201, 409, 422              |
+| `GET /api/usuarios/{id}`               | Detalle                                                                         | `usuarios:administrar`             | 200, 404, 422              |
+| `PATCH /api/usuarios/{id}`             | Cambiar correo o estado (`activo`, `bloqueado`, `inactivo`)                     | `usuarios:administrar`             | 200, 404, 409, 422         |
+| `DELETE /api/usuarios/{id}`            | Desactivar (estado `inactivo`)                                                  | `usuarios:administrar`             | 204, 404, 409              |
+| `GET /api/usuarios/{id}/roles`         | Roles asignados                                                                 | `roles:administrar`                | 200, 404                   |
+| `PUT /api/usuarios/{id}/roles`         | Reemplazar roles                                                                | `roles:administrar`                | 200, 404, 409, 422         |
+| `GET /api/usuarios/{id}/perfil`        | Perfil genérico                                                                 | `perfiles:operar` o propio usuario | 200, 403, 404              |
+| `PUT /api/usuarios/{id}/perfil`        | Crear o reemplazar perfil                                                       | `perfiles:operar` o propio usuario | 200, 403, 404, 422         |
+| `GET /api/roles`                       | Listar roles                                                                    | `roles:administrar`                | 200                        |
+| `POST /api/roles`                      | Crear rol con permisos `<recurso>:<accion>` de cualquier servicio               | `roles:administrar`                | 201, 409, 422              |
+| `GET /api/roles/{id}`                  | Detalle                                                                         | `roles:administrar`                | 200, 404                   |
+| `PATCH /api/roles/{id}`                | Cambiar descripción o permisos                                                  | `roles:administrar`                | 200, 404, 409, 422         |
+| `DELETE /api/roles/{id}`               | Eliminar rol no asignado                                                        | `roles:administrar`                | 204, 404, 409              |
+| `GET /api/permisos`                    | Catálogo de permisos propios                                                    | `autenticado`                      | 200, 401                   |
+| `POST /api/dev/tokens`                 | Token de prueba con `roles`, `permisos_extra` y `duracion` (solo `API_ENV=dev`) | `publico` en dev                   | 200, 422; 404 fuera de dev |
+| `GET /healthz`, `GET /readyz`          | Salud (sin cambios)                                                             | `publico`                          | 200, 503                   |
 
 Cambios respecto de la tabla del prompt:
 
 - `GET /api/usuarios` tiene los filtros `estado` y `correo`.
-- `POST /api/dev/tokens` tiene `permisos_extra`.
+- `POST /api/dev/tokens` tiene `permisos_extra` y, tras la respuesta del equipo, `duracion`.
 - Las reglas 409 (último administrador, rol asignado y rol administrador protegido) quedaron implementadas.
 
 ## Decisiones aplicadas
@@ -96,9 +97,10 @@ Cambios respecto de la tabla del prompt:
 | `golang.org/x/crypto`    | v0.54.0             | **v0.58.0**         | `google.golang.org/grpc v1.83.2` (que entra por goose como `tool`) exige ≥ v0.55.0, y `x/net v0.62.0` sube a v0.58.0. No se puede bajar sin sacar goose de `go.mod` |
 | `github.com/google/uuid` | no está en la tabla | **v1.6.0**, directa | `jti` e IDs. Ya estaba en el grafo, porque Huma lo requiere                                                                                                         |
 
-Hay que pedir que ambas entren a la tabla del DAS (§3, Backend).
+El equipo aceptó ambas por ahora (23 de noviembre). Quedan para pedirle al jefe de proyecto que
+las agregue a la tabla del DAS (§3, Backend). La salida de goose de `go.mod` va en la Tanda 3.
 
-### Decisiones mías que conviene confirmar
+### Decisiones propias, confirmadas por el equipo
 
 - **Seed solo en dev y test.** En `prod` el store en memoria arranca vacío, con un aviso en el
   log, para no publicar credenciales conocidas en un ambiente productivo.
@@ -108,6 +110,17 @@ Hay que pedir que ambas entren a la tabla del DAS (§3, Backend).
   contraseña correcta. Con la contraseña mala da el mismo 401 genérico.
 - **Tokens de prueba con `usuario_id` inventado.** Sirven para los otros servicios, pero
   `GET /api/sesiones/actual` los rechaza con 401 porque el usuario no existe aquí.
+
+### Respuestas del equipo a las preguntas de la primera entrega
+
+| Pregunta                         | Respuesta                    | Qué se hizo                                                                                                                                                                                                                                                                        |
+| -------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Desviaciones del DAS             | Aceptadas por ahora          | Anotadas arriba; goose sale de `go.mod` en la Tanda 3                                                                                                                                                                                                                              |
+| Decisiones propias               | Confirmadas las cuatro       | —                                                                                                                                                                                                                                                                                  |
+| Duración de los tokens de prueba | Sí, agregar `duracion`       | `POST /api/dev/tokens` acepta `duracion` de `1m` a `1440m` o de `1h` a `24h`; por defecto `JWT_TTL` (15m). El patrón del contrato acota el máximo y el service lo vuelve a validar. Pruebas: `TestTokenDePruebaConDuracion`, `TestTokenPruebaConDuracion`, `TestEmitirConDuracion` |
+| Correo en los claims             | No                           | Menos datos personales en el token: quien lo necesite lo pide a `GET /api/sesiones/actual`. Anotado en `docs/jwt-de-prueba.md`                                                                                                                                                     |
+| Renombrar "usuarios-roles"       | Sí, en la Tanda 3            | Junto con el traspaso a `PINGESO-CIVIL`                                                                                                                                                                                                                                            |
+| Publicar el contrato             | Push y PR los hace el equipo | Cuando esté en `main` se comparte el enlace a `contracts/openapi.yaml` y `docs/jwt-de-prueba.md`                                                                                                                                                                                   |
 
 ## Cómo probarlo
 
@@ -150,17 +163,35 @@ Documentación interactiva: `http://localhost:5161/api/docs`.
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gofmt -l .`                                                         | ✅ sin archivos                                                                                                                                                                          |
 | `go vet ./...`                                                       | ✅                                                                                                                                                                                       |
-| `go test ./...`                                                      | ✅ cobertura: cmd/api 79.7 %, api 96.1 %, config 100 %, service 91.4 %, tokens 92.4 %, memoria 95.9 %                                                                                    |
+| `go test ./...`                                                      | ✅ cobertura: cmd/api 79.7 %, api 96.1 %, config 100 %, service 91.6 %, tokens 92.8 %, memoria 95.9 %                                                                                    |
 | `pnpm codegen` + `git diff --exit-code`                              | ✅ sin diferencias                                                                                                                                                                       |
 | `pnpm verify`                                                        | ✅ Tuve que pasar Prettier por `docs/auditoria.md`, que no está commiteado                                                                                                               |
 | oasdiff v1.35.0 `breaking` contra `main`                             | ✅ "No breaking changes to report"                                                                                                                                                       |
 | Humo con el servidor real (`ejecutar()` en el puerto 5161, modo dev) | ✅ Login 200 con cookie `HttpOnly; Secure; SameSite=Lax`; sesión actual 200; token de prueba 200; operador en `/api/usuarios` 403; JWKS 200; `/api/docs` 200; logout 204 con `Max-Age=0` |
 | Ejemplo de `docs/jwt-de-prueba.md` con keyfunc v3.9.1                | ✅ Compilado en un módulo aparte; valida un token real y rechaza la falta de permiso y el token alterado                                                                                 |
-| `docker compose up` / `docker build`                                 | ⏸️ No se corrió: requiere tu permiso                                                                                                                                                     |
+| `docker compose up -d --build` (detalle abajo)                       | ✅ Corrido dos veces, con permiso del equipo; la última sobre `665d92e`                                                                                                                  |
 | `go test -race`                                                      | ⏸️ No se pudo: en esta máquina no hay gcc para cgo. La concurrencia del store se prueba sin `-race`                                                                                      |
 
 Nota: Windows Defender bloqueó el `.exe` compilado en `%TEMP%` (falso positivo común en binarios
 Go sin firma). Por eso la prueba de humo se hizo con una prueba Go temporal, que no quedó en el repo.
+
+### Docker Compose (23 de noviembre)
+
+Docker 29.7.2 y Compose v5.3.1, con un `.env` local creado desde `.env.example`: contraseña de
+PostgreSQL aleatoria y `JWT_LLAVE_PRIVADA_ARCHIVO` vacía. El `.env` no se commitea. Se corrió primero
+sobre `2c7101d` y luego sobre `665d92e`, con el mismo resultado. Al final, `docker compose down`.
+
+| Verificación en `127.0.0.1:5161`           | Resultado                                                                                                                               |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Orden de arranque                          | ✅ `postgres` llega a `healthy`, `migrate` aplica `00001_esquema_inicial.sql` y termina con código 0, y después arranca `backend`       |
+| Puertos                                    | ✅ `backend` publicado solo en `127.0.0.1:5161->8080`; `postgres` sin puerto publicado                                                  |
+| Log del backend                            | ✅ JSON con el aviso de llave temporal, `kid` y "servidor escuchando" en el puerto 8080 con ambiente `dev`                              |
+| `GET /healthz`                             | ✅ 200 `{"estado":"ok"}`                                                                                                                |
+| `GET /readyz`                              | ✅ 200 con PostgreSQL arriba. Con `docker compose stop postgres`, 503 `application/problem+json` "la base de datos no responde" (MF-01) |
+| `GET /.well-known/jwks.json`               | ✅ 200, `Content-Type: application/json`, `Cache-Control: public, max-age=300`, una llave RS256                                         |
+| `POST /api/sesiones` con `admin@dev.local` | ✅ 200 y `Set-Cookie: sesion=<jwt>; Path=/; Max-Age=899; HttpOnly; Secure; SameSite=Lax`                                                |
+| `POST /api/dev/tokens`                     | ✅ 200 con `iss=pingeso-identidad` y `aud=["pingeso"]`. Con `"duracion":"8h"`, `exp - iat = 28800` s; con `"25h"`, 422                  |
+| `docker compose down`                      | ✅ Contenedores y red eliminados; el volumen `datos_postgres` se conserva                                                               |
 
 ## Checklist del Hito 1
 
@@ -175,7 +206,7 @@ Go sin firma). Por eso la prueba de humo se hizo con una prueba Go temporal, que
 | Todos los endpoints responden con datos simulados                            | ✅     | Store en memoria con seed                                                                                    |
 | `/api/docs` con `API_ENV=dev`                                                | ✅     |                                                                                                              |
 | `/healthz` y `/readyz`                                                       | ✅     |                                                                                                              |
-| `docker compose up` con postgres, migrate, backend y frontend en 5160 y 5161 | ❌     | No hay frontend (Tanda 2). Compose sin probar en esta tanda                                                  |
+| `docker compose up` con postgres, migrate, backend y frontend en 5160 y 5161 | ⚠️     | postgres, migrate y backend levantan y responden en 5161. Falta el frontend en 5160 (Tanda 2)                |
 | Contratos externos y prism/MSW                                               | —      | No aplica: este servicio no consume a otros                                                                  |
 | Capas separadas, ningún handler llama al store                               | ✅     |                                                                                                              |
 | Dueño único por dato                                                         | ✅     |                                                                                                              |
@@ -200,24 +231,17 @@ Go sin firma). Por eso la prueba de humo se hizo con una prueba Go temporal, que
   prueba de que no se loguean secretos (MF-31).
 - **Tanda 6:** e2e con Testcontainers y golden. Candidatos: registro concurrente con el mismo
   correo, último administrador concurrente, token vencido y prueba de tiempos del login (MF-12).
-- **Compose y Dockerfiles:**
-  - Sacar goose de `go.mod` (`go install` en `Dockerfile.migrate`) para volver a `x/crypto v0.54.0`
-    si el jefe de proyecto no acepta la desviación.
-  - Montar la llave de firma en el contenedor.
-  - Probar `docker compose up`.
+- **Tanda 3 (Compose, Dockerfiles y traspaso):**
+  - Sacar goose de `go.mod` (`go install` en `Dockerfile.migrate`), lo que permite volver a
+    `x/crypto v0.54.0`.
+  - Montar la llave de firma en el contenedor para test y prod.
+  - Renombrar "usuarios-roles" a "identidad" (log, `package.json`, Compose, título del contrato y
+    módulo Go) junto con el traspaso a `PINGESO-CIVIL`.
 - **Sin tanda asignada:** bloqueo por fuerza bruta (MF-11), procedimiento de rotación de llave
   (MF-16) y defensa CSRF verificada (MF-34).
 
 ## Preguntas abiertas
 
-1. ¿Aceptan las dos desviaciones del DAS (`x/crypto v0.58.0` y `google/uuid v1.6.0`), o
-   adelantamos la salida de goose de `go.mod`?
-2. ¿Confirman las cuatro decisiones de "Decisiones mías que conviene confirmar"?
-3. Los tokens de prueba duran 15 minutos, igual que los reales. ¿Les sirve a los otros grupos, o
-   agregamos un campo `duracion` (solo en dev) para pedir tokens más largos?
-4. ¿Quieren el correo en los claims? D13 no lo incluye, así que hoy los consumidores tienen que
-   llamar a `GET /api/sesiones/actual` para obtenerlo.
-5. El servicio todavía se llama "usuarios-roles" en el log, `package.json` y el título del
-   contrato, y no "identidad". ¿Lo renombramos junto con el traspaso a `PINGESO-CIVIL`?
-6. ¿Cómo publicamos el contrato a los otros grupos antes del merge? Una opción es adjuntar
-   `contracts/openapi.yaml` y `docs/jwt-de-prueba.md` en el canal del curso.
+Las seis preguntas de la primera entrega quedaron respondidas (ver "Respuestas del equipo"). No
+quedan preguntas abiertas de esta tanda. Lo único pendiente es pedirle al jefe de proyecto que
+actualice la tabla del DAS con las dos desviaciones.
