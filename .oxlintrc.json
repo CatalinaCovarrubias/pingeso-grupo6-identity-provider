@@ -1,0 +1,101 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "oxc", "import", "jsx-a11y"],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/coverage/**",
+    "apps/web/public/mockServiceWorker.js",
+    "apps/web/src/api/esquema.d.ts",
+    "apps/web/src/components/ui/**"
+  ],
+  "rules": {
+    "no-restricted-globals": [
+      "error",
+      { "name": "fetch", "message": "Las llamadas HTTP van solo en archivos *.api.ts." },
+      {
+        "name": "localStorage",
+        "message": "Prohibido por el DAS §5: la sesión vive en una cookie HttpOnly."
+      },
+      {
+        "name": "sessionStorage",
+        "message": "Prohibido por el DAS §5: la sesión vive en una cookie HttpOnly."
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      { "property": "localStorage", "message": "Prohibido por el DAS §5." },
+      { "property": "sessionStorage", "message": "Prohibido por el DAS §5." },
+      {
+        "property": "fetch",
+        "message": "Las llamadas HTTP van solo en archivos *.api.ts."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "openapi-fetch",
+            "message": "El cliente HTTP se crea solo en archivos *.api.ts."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["apps/web/src/**/*.api.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          { "name": "localStorage", "message": "Prohibido por el DAS §5." },
+          { "name": "sessionStorage", "message": "Prohibido por el DAS §5." }
+        ],
+        "no-restricted-properties": [
+          "error",
+          { "property": "localStorage", "message": "Prohibido por el DAS §5." },
+          { "property": "sessionStorage", "message": "Prohibido por el DAS §5." }
+        ],
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["apps/web/src/componentes/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "openapi-fetch",
+                "message": "El cliente HTTP se crea solo en archivos *.api.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["../*", "../**", "@/componentes/*", "@/componentes"],
+                "message": "Un microcomponente no importa a otro (DAS §3). Lo compartido va en @/components o @/lib."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/web/src/componentes/**/*.api.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**", "@/componentes/*", "@/componentes"],
+                "message": "Un microcomponente no importa a otro (DAS §3)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
