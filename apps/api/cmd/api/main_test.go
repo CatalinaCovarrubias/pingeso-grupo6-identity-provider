@@ -75,6 +75,42 @@ func TestLevantarServidorFallaConDatabaseURLInvalida(t *testing.T) {
 	}
 }
 
+func TestLevantarServidorFallaConLlaveInvalida(t *testing.T) {
+	definirEntornoValido(t)
+	ruta := filepath.Join(t.TempDir(), "rota.pem")
+	if err := os.WriteFile(ruta, []byte("no es una llave"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("JWT_LLAVE_PRIVADA_ARCHIVO", ruta)
+
+	if err := ejecutar(context.Background(), nil, &bytes.Buffer{}); err == nil {
+		t.Fatal("se esperaba error por llave inválida")
+	}
+}
+
+func TestLevantarServidorFallaSinLlaveEnProduccion(t *testing.T) {
+	definirEntornoValido(t)
+	t.Setenv("API_ENV", "prod")
+	t.Setenv("JWT_LLAVE_PRIVADA_ARCHIVO", "")
+
+	err := ejecutar(context.Background(), nil, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "JWT_LLAVE_PRIVADA_ARCHIVO") {
+		t.Fatalf("en prod la llave es obligatoria, llegó: %v", err)
+	}
+}
+
+func TestLevantarServidorEnDesarrolloGeneraLlave(t *testing.T) {
+	definirEntornoValido(t)
+	t.Setenv("API_ENV", "dev")
+	t.Setenv("JWT_LLAVE_PRIVADA_ARCHIVO", "")
+
+	ctx, cancelar := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancelar()
+	if err := ejecutar(ctx, nil, &bytes.Buffer{}); err != nil {
+		t.Fatalf("en dev debe arrancar sin llave: %v", err)
+	}
+}
+
 func TestLevantarServidorSeCierraAlCancelar(t *testing.T) {
 	definirEntornoValido(t)
 

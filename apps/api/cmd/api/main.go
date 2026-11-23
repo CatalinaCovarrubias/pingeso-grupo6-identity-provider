@@ -24,6 +24,7 @@ import (
 
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/api"
 	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/config"
+	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
 )
 
 // version se reemplaza al compilar con -ldflags "-X main.version=<sha>".
@@ -82,6 +83,12 @@ func levantarServidor(ctx context.Context) error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("servicio", "usuarios-roles", "version", version)
 	slog.SetDefault(logger)
 
+	llave, err := obtenerLlave(cfg, logger)
+	if err != nil {
+		return err
+	}
+	logger.Info("llave de firma JWT lista", "kid", llave.Kid())
+
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("DATABASE_URL inválida: %w", err)
@@ -115,4 +122,22 @@ func levantarServidor(ctx context.Context) error {
 	ctxCierre, cancelar := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancelar()
 	return servidor.Shutdown(ctxCierre)
+}
+
+// obtenerLlave carga la llave de firma desde JWT_LLAVE_PRIVADA_ARCHIVO. Solo en dev,
+// si la variable falta, genera una llave en memoria y lo avisa en el log.
+func obtenerLlave(cfg config.Configuracion, logger *slog.Logger) (*tokens.Llave, error) {
+	if cfg.JWTLlavePrivadaArchivo != "" {
+		return tokens.CargarLlave(cfg.JWTLlavePrivadaArchivo)
+	}
+	if !cfg.EsDesarrollo() {
+		return nil, errors.New("JWT_LLAVE_PRIVADA_ARCHIVO es obligatoria fuera de dev")
+	}
+	llave, err := tokens.GenerarLlave()
+	if err != nil {
+		return nil, err
+	}
+	logger.Warn("JWT_LLAVE_PRIVADA_ARCHIVO no está definida: se generó una llave temporal en memoria; "+
+		"los tokens dejan de valer al reiniciar el servicio", "kid", llave.Kid())
+	return llave, nil
 }
