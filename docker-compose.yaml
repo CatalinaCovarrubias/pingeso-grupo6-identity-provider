@@ -49,5 +49,26 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VERSION: dev
+    environment:
+      # El spa-server reenvía /api y /.well-known aquí: el navegador ve un solo origen.
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "127.0.0.1:5160:8080"
+    healthcheck:
+      # La imagen es distroless (sin shell ni curl): el mismo binario hace la consulta.
+      test: ["CMD", "/app/spa-server", "salud"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_started
+
 volumes:
   datos_postgres:
