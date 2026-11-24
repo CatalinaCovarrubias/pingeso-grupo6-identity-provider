@@ -1,17 +1,16 @@
-# MS Usuarios y Roles (PT 6 · Grupo 6)
+# MS Usuarios y Roles
 
-Servicio base de la LPS de PINGESO 2-2026: autenticación, usuarios, roles y perfiles. Emite los
-JWT que validan los demás servicios. Sigue el documento **DAS — Desarrollo de Microservicios**.
+Servicio base de autenticación, usuarios, roles y perfiles. Emite los JWT que validan los demás servicios.
 
 ## Evidencia
 
-- Pipeline: https://github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/actions
+- Pipeline: https://github.com/PINGESO-CIVIL/usuarios-roles/actions
 - SonarQube: https://sonarcloud.io/project/overview?id=CatalinaCovarrubias_pingeso-grupo6-identity-provider
 - Contrato: [`contracts/openapi.yaml`](contracts/openapi.yaml)
 - Modos de falla: [`docs/modos-de-falla.md`](docs/modos-de-falla.md)
 - JWT de prueba para los otros grupos: [`docs/jwt-de-prueba.md`](docs/jwt-de-prueba.md)
 
-## Puertos locales (servicio N = 6)
+## Puertos locales
 
 | Componente | URL                               |
 | ---------- | --------------------------------- |
