@@ -213,13 +213,18 @@
 /*
  * Banda del sobre de seguridad. El dibujo es una máscara y el color sale de los tokens
  * (--patron-sobre-tinta sobre --patron-sobre-fondo), así que el cliente puede teñirla.
+ *
+ * Es CSS estándar con selectores completos (sin @utility ni anidamiento) para que lo
+ * entienda también el analizador de SonarQube.
  */
-@utility patron-sobre {
-  background-color: var(--patron-sobre-fondo);
-  position: relative;
-  overflow: hidden;
+@layer components {
+  .patron-sobre {
+    background-color: var(--patron-sobre-fondo);
+    position: relative;
+    overflow: hidden;
+  }
 
-  &::before {
+  .patron-sobre::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -231,30 +236,41 @@
       transform var(--duracion-sobre) var(--curva-salida),
       opacity var(--duracion-sobre) var(--curva-salida);
   }
-}
 
-/* Sobre abierto (sesion-actual): la solapa con el patrón se recoge hacia arriba. */
-@utility sobre-abierto {
-  /* Sin el fondo tintado: la solapa recogida queda sobre la tarjeta, sin franja vacía. */
-  background-color: transparent;
-  &::before {
-    @starting-style {
-      transform: scaleY(1);
-      opacity: 1;
-    }
+  /* Sobre abierto (sesion-actual): la solapa con el patrón se recoge hacia arriba.
+     Sin el fondo tintado, la solapa recogida queda sobre la tarjeta, sin franja vacía. */
+  .sobre-abierto {
+    background-color: transparent;
+  }
+
+  .sobre-abierto::before {
     transform: scaleY(0.35);
     opacity: 0.7;
   }
-}
 
-/* Contenido que aparece al abrir el sobre. */
-@utility contenido-sobre {
-  transition:
-    transform var(--duracion-sobre) var(--curva-salida),
-    opacity var(--duracion-sobre) var(--curva-salida);
+  /* Contenido que aparece al abrir el sobre. */
+  .contenido-sobre {
+    transition:
+      transform var(--duracion-sobre) var(--curva-salida),
+      opacity var(--duracion-sobre) var(--curva-salida);
+  }
+
+  /*
+   * Punto de partida de las dos animaciones. Tiene que ir DESPUÉS de las reglas de arriba:
+   * la especificidad es la misma y gana la última, así que antes de ellas no animaría.
+   */
   @starting-style {
-    opacity: 0;
-    transform: translateY(0.25rem);
+    .sobre-abierto::before {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+
+  @starting-style {
+    .contenido-sobre {
+      opacity: 0;
+      transform: translateY(0.25rem);
+    }
   }
 }
 
