@@ -1,8 +1,8 @@
 # Tanda 2 — Frontend React, microcomponentes de sesión y Compose completo
 
-Rama `feat/tanda-2-front`, creada desde `feat/tanda-1-contrato-mocks` porque el PR de la
-Tanda 1 todavía no está mergeado. Cuando lo esté, se hace rebase sobre `main` y recién ahí
-push y PR. Sin tags ni releases. Fecha: 23 de noviembre de 2026.
+Rama `feat/tanda-2-front`, creada desde `feat/tanda-1-contrato-mocks` y rebasada sobre
+`main` (`2d5eccc`) cuando se mergeó la Tanda 1. Está en el PR #27, sin mergear. Sin tags ni
+releases. Fecha: 23 de noviembre de 2026; actualizado el 25 de noviembre.
 
 ## Objetivo
 
@@ -21,7 +21,7 @@ imagen `web` con su `spa-server`, el servicio `frontend` en Compose y el CI y So
 | `feat(web): microcomponente inicio-sesion`             | Vista, `inicio-sesion.api.ts`, `use-inicio-sesion.ts`, más `lib/problemas.ts` (errores RFC 9457) y `lib/consultas.tsx` (`ConConsultas`)                                         |
 | `feat(web): microcomponente sesion-actual`             | Vista, API y hook, con los estados cargando, con sesión, sin sesión y error                                                                                                     |
 | `feat(web): app de desarrollo con mocks MSW…`          | `src/app-desarrollo.tsx`, handlers MSW, `public/mockServiceWorker.js`, `.env.development` (mocks) y `.env.backend` (backend real)                                               |
-| `test(web): pruebas de los microcomponentes…`          | 23 pruebas de vitest con MSW, con cobertura lcov en `apps/web/coverage/lcov.info`                                                                                               |
+| `test(web): pruebas de los microcomponentes…`          | Pruebas de vitest con MSW (32 desde el 25/11), con cobertura lcov en `apps/web/coverage/lcov.info`                                                                              |
 | `chore: reglas de oxlint…`                             | `.oxlintrc.json`: `fetch` y `openapi-fetch` solo en `*.api.ts`; `localStorage` y `sessionStorage` prohibidos; un microcomponente no importa a otro                              |
 | `fix(web): sube vite a 8.1.6 y vitest a 4.1.12…`       | Corrige el hallazgo HIGH de `pnpm audit` (ver desviaciones)                                                                                                                     |
 | `feat(web): spa-server en Go…`                         | `apps/web/spa-server/` con `go.mod` propio y solo stdlib, más sus pruebas                                                                                                       |
@@ -30,6 +30,8 @@ imagen `web` con su `spa-server`, el servicio `frontend` en Compose y el CI y So
 | `ci: build, pruebas, audit y escaneo de la imagen web` | `ci.yml` y `sonar-project.properties`                                                                                                                                           |
 | `style(web): ajustes de /audit y /polish…`             | Correcciones del pulido (ver más abajo)                                                                                                                                         |
 | `docs: …`                                              | Este documento, `docs/diseno/PRODUCT.md`, `docs/diseno/DESIGN.md` y las capturas de `docs/tandas/tanda-2/`                                                                      |
+| `fix(web): reescribe el CSS del sobre…`                | CSS estándar para el Quality Gate y arreglo de la animación (25/11)                                                                                                             |
+| `fix(web): evita el backtracking…`                     | Regex del correo propuesta en la revisión de Catalina, con 9 casos de prueba (25/11)                                                                                            |
 
 ### Estructura de `apps/web`
 
@@ -109,20 +111,20 @@ coordina el host con los callbacks, como hace `app-desarrollo.tsx`.
 
 ## Decisiones aplicadas
 
-| #   | Decisión                                                                                                                                                                                                                                                      | Dónde                                 |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| F1  | **react-query sin provider global**: cada microcomponente se envuelve en `ConConsultas`, que usa el `QueryClient` del host si llega por props o uno propio. Un provider anidado no pisa el del host                                                           | `src/lib/consultas.tsx`               |
-| F2  | `fetch` solo en `*.api.ts`, vía `openapi-fetch` con `credentials: "include"`. Los errores se convierten en `ErrorApi` (estado + problem+json)                                                                                                                 | `*.api.ts`, `src/lib/problemas.ts`    |
-| F3  | Mocks MSW **generados desde el contrato**: `scripts/generar-mocks.mjs` lee los `examples` y escribe `ejemplos.gen.ts`; los handlers solo agregan los escenarios (seed, 401, 403, 422, 500)                                                                    | `src/mocks/`                          |
-| F4  | `VITE_USAR_MOCKS` decide entre MSW y el backend real. En `pnpm dev` vale `true`; en `pnpm dev:backend` y en la imagen, `false`. MSW se importa de forma dinámica y no entra al bundle de producción                                                           | `src/main.tsx`, `.env.*`              |
-| F5  | **Tokens en un solo CSS** con `@theme` de Tailwind 4: colores OKLCH (escalas + tokens semánticos), escala tipográfica cerrada, dos pesos, radios, sombras de dos capas y duración del gesto. Todos son variables en `:root` que un cliente puede sobrescribir | `src/estilos/tema.css`                |
-| F6  | **La tipografía es un token**: los microcomponentes usan `var(--fuente-texto)` y `var(--fuente-mono)` con fallback a `system-ui` y `ui-monospace`. Las fuentes Atkinson se cargan solo en la app de desarrollo y en el CSS opcional `fuentes.css`             | `tema.css`, `fuentes.css`, `main.tsx` |
-| F7  | **Gesto "abrir el sobre"**: 180 ms, solo `transform` y `opacity` en CSS (`@starting-style`), sin animación con `prefers-reduced-motion`. El tramado es una máscara SVG teñida con tokens y nunca lleva texto encima                                           | `tema.css`, `components/sobre.tsx`    |
-| F8  | El `spa-server` vive en `apps/web/spa-server/` (solo stdlib). Sirve `/srv` con `os.Root` (no se puede salir de la raíz), aplica fallback SPA, cachea `/assets/` como inmutable, responde `/healthz` y reenvía `/api` y `/.well-known` a `BACKEND_URL`         | `apps/web/spa-server/main.go`         |
-| F9  | Healthcheck sin shell: `spa-server salud` consulta `/healthz`. Se usa en el `HEALTHCHECK` de la imagen y en Compose                                                                                                                                           | `Dockerfile`, `docker-compose.yaml`   |
-| F10 | El proxy **conserva el `Host` del navegador**. Sin esto, el backend publicaba `https://backend:8080/schemas/…` en los `$schema` de sus respuestas                                                                                                             | `main.go`                             |
-| F11 | Además de `nosniff` y `Referrer-Policy`, el `spa-server` envía `Content-Security-Policy: frame-ancestors 'none'` (contra el clickjacking en el login), propaga `X-Request-Id` y escribe logs JSON con `metodo`, `ruta`, `estado` y `duracion_ms`              | `main.go`                             |
-| F12 | Las horas se muestran en reloj de 24 horas (`hourCycle: "h23"`): sin eso, `es-CL` daba "02:35 p. m."                                                                                                                                                          | `use-sesion-actual.ts`                |
+| #   | Decisión                                                                                                                                                                                                                                                                                        | Dónde                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| F1  | **react-query sin provider global**: cada microcomponente se envuelve en `ConConsultas`, que usa el `QueryClient` del host si llega por props o uno propio. Un provider anidado no pisa el del host                                                                                             | `src/lib/consultas.tsx`               |
+| F2  | `fetch` solo en `*.api.ts`, vía `openapi-fetch` con `credentials: "include"`. Los errores se convierten en `ErrorApi` (estado + problem+json)                                                                                                                                                   | `*.api.ts`, `src/lib/problemas.ts`    |
+| F3  | Mocks MSW **generados desde el contrato**: `scripts/generar-mocks.mjs` lee los `examples` y escribe `ejemplos.gen.ts`; los handlers solo agregan los escenarios (seed, 401, 403, 422, 500)                                                                                                      | `src/mocks/`                          |
+| F4  | `VITE_USAR_MOCKS` decide entre MSW y el backend real. En `pnpm dev` vale `true`; en `pnpm dev:backend` y en la imagen, `false`. MSW se importa de forma dinámica y no entra al bundle de producción                                                                                             | `src/main.tsx`, `.env.*`              |
+| F5  | **Tokens en un solo CSS** con `@theme` de Tailwind 4: colores OKLCH (escalas + tokens semánticos), escala tipográfica cerrada, dos pesos, radios, sombras de dos capas y duración del gesto. Todos son variables en `:root` que un cliente puede sobrescribir                                   | `src/estilos/tema.css`                |
+| F6  | **La tipografía es un token**: los microcomponentes usan `var(--fuente-texto)` y `var(--fuente-mono)` con fallback a `system-ui` y `ui-monospace`. Las fuentes Atkinson se cargan solo en la app de desarrollo y en el CSS opcional `fuentes.css`                                               | `tema.css`, `fuentes.css`, `main.tsx` |
+| F7  | **Gesto "abrir el sobre"**: 180 ms, solo `transform` y `opacity` en CSS (`@starting-style`), sin animación con `prefers-reduced-motion`. El `@starting-style` va después de las reglas finales (corregido el 25/11). El tramado es una máscara SVG teñida con tokens y nunca lleva texto encima | `tema.css`, `components/sobre.tsx`    |
+| F8  | El `spa-server` vive en `apps/web/spa-server/` (solo stdlib). Sirve `/srv` con `os.Root` (no se puede salir de la raíz), aplica fallback SPA, cachea `/assets/` como inmutable, responde `/healthz` y reenvía `/api` y `/.well-known` a `BACKEND_URL`                                           | `apps/web/spa-server/main.go`         |
+| F9  | Healthcheck sin shell: `spa-server salud` consulta `/healthz`. Se usa en el `HEALTHCHECK` de la imagen y en Compose                                                                                                                                                                             | `Dockerfile`, `docker-compose.yaml`   |
+| F10 | El proxy **conserva el `Host` del navegador**. Sin esto, el backend publicaba `https://backend:8080/schemas/…` en los `$schema` de sus respuestas                                                                                                                                               | `main.go`                             |
+| F11 | Además de `nosniff` y `Referrer-Policy`, el `spa-server` envía `Content-Security-Policy: frame-ancestors 'none'` (contra el clickjacking en el login), propaga `X-Request-Id` y escribe logs JSON con `metodo`, `ruta`, `estado` y `duracion_ms`                                                | `main.go`                             |
+| F12 | Las horas se muestran en reloj de 24 horas (`hourCycle: "h23"`): sin eso, `es-CL` daba "02:35 p. m."                                                                                                                                                                                            | `use-sesion-actual.ts`                |
 
 ### Dependencias fuera de la tabla del DAS
 
@@ -184,7 +186,7 @@ Cuentas de prueba (también aparecen en la app de desarrollo): `admin@dev.local`
 | `pnpm install --frozen-lockfile`                             | ✅                                                                                                                                                                                         |
 | `pnpm verify` (Prettier, oxlint, go vet de API y spa-server) | ✅ (ver la nota sobre Prettier en pendientes)                                                                                                                                              |
 | `pnpm typecheck`                                             | ✅                                                                                                                                                                                         |
-| `pnpm test`                                                  | ✅ 23 pruebas web (98,8 % de líneas), API y spa-server                                                                                                                                     |
+| `pnpm test`                                                  | ✅ 32 pruebas web (98,7 % de líneas), API y spa-server                                                                                                                                     |
 | Lógica de fechas con `TZ=UTC` y `TZ=Pacific/Auckland`        | ✅                                                                                                                                                                                         |
 | `pnpm build:web`                                             | ✅                                                                                                                                                                                         |
 | `pnpm codegen` + `git diff --exit-code`                      | ✅ sin diferencias (corrido dos veces: es determinista)                                                                                                                                    |
@@ -208,6 +210,32 @@ Cuentas de prueba (también aparecen en la app de desarrollo): `admin@dev.local`
 | 403: `PATCH /api/usuarios/{id}` con `estado: bloqueado` | ✅ el login de `usuario@dev.local` da 403 y la UI muestra "Tu cuenta no está activa"; con una contraseña mala sigue siendo 401                  |
 | `docker compose down`                                   | ✅                                                                                                                                              |
 
+### Cambios del 25 de noviembre
+
+- **CSS del sobre (`tema.css`).** SonarQube marcaba 4 bugs (`css:S8776` ×2 y
+  `css:S8767` ×2) por el anidamiento dentro de `@utility`. Se reescribió como CSS estándar en
+  `@layer components`, con selectores completos y `@starting-style` como reglas propias.
+- **Animación de la banda.** No corría: el `@starting-style` de `.sobre-abierto::before`
+  quedaba antes de la regla final, que lo pisaba, y solo se animaba el contenido. La
+  verificación del 23/11 había revisado el estado final, no la transición. Ahora la banda pasa
+  de `scaleY(1)` a `scaleY(0.35)` en 180 ms, sin transiciones con `prefers-reduced-motion`, y
+  el estilo final es el mismo.
+- **Regex del correo.** Se usa la propuesta en la revisión de Catalina,
+  `/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/`, que no hace backtracking. Rechaza además dominios
+  con puntos dobles, iniciales o finales.
+- **Capturas.** Se repitieron y compararon píxel a píxel. Las diferencias caen en campos,
+  botones y la hora de vencimiento, y aparecen también al repetirlas con el mismo código.
+  Ninguna cae en la banda del sobre. Las capturas versionadas no cambiaron.
+- **Local:** `verify`, `typecheck`, `test` (32 pruebas web), `build:web` y `codegen` sin
+  diferencias. Las dos reglas de stylelint con los mismos mensajes que Sonar marcan 4 errores
+  en el CSS anterior (mismas líneas) y ninguno en el nuevo.
+- **CI (run `45727778985`):** pasan los pasos de `calidad` anteriores a Sonar. Fallan el scan
+  de Sonar (`pullrequest with key '27'`) y gitleaks (falta `GITLEAKS_LICENSE`), ambos de
+  configuración desde el traspaso a PINGESO-CIVIL. `imagen` se saltó.
+- **Quality Gate: pendiente.** El scan no llegó a correr, así que SonarCloud sigue mostrando
+  el análisis anterior. Falta que Sonar vuelva a correr para confirmar que los 4 bugs ya no
+  aparecen.
+
 ## Checklist del Hito 1
 
 | Ítem                                                                                            | Estado   | Nota                                                                                              |
@@ -216,7 +244,7 @@ Cuentas de prueba (también aparecen en la app de desarrollo): `admin@dev.local`
 | `docker compose up -d --build` levanta postgres, migrate, backend y **frontend** en 5160 y 5161 | ✅       | Cierra el pendiente de la Tanda 1                                                                 |
 | Estructura de repositorio igual a la plantilla                                                  | ⚠️       | `apps/web` ya existe (con `src/componentes/` según DAS §3). Falta `internal/repository` (Tanda 4) |
 | Consumidor contra `prism mock` o handlers MSW                                                   | ✅       | Los microcomponentes trabajan contra handlers MSW generados desde el contrato                     |
-| Jobs `calidad`, `seguridad` e `imagen` en verde                                                 | ⏳       | Se verá al abrir el PR (después del rebase)                                                       |
+| Jobs `calidad`, `seguridad` e `imagen` en verde                                                 | ❌       | Bloqueado por la configuración de gitleaks y Sonar; el Quality Gate queda pendiente               |
 | Paso de contrato: `pnpm codegen` sin diferencias                                                | ✅ local | Ahora también cubre los tipos TS y los ejemplos MSW                                               |
 | Contrato publicado para los grupos dependientes                                                 | ⚠️       | Sigue pendiente de la Tanda 1 (merge, release `hito-1` y aviso)                                   |
 
@@ -284,9 +312,9 @@ malas, cuenta bloqueada y con sesión, en escritorio y en 390 px. Las capturas e
   tiene carpetas locales excluidas con `.git/info/exclude` (no con `.gitignore`), `pnpm verify`
   falla en su máquina aunque en CI pase. Conviene excluirlas también en `.prettierignore` o
   moverlas fuera del repo.
-- **Publicación de esta rama:** rebase sobre `main` cuando se mergee la Tanda 1, push, PR y
-  revisar `gh pr checks`. El CI nuevo (Playwright, audit, `web:ci`) todavía no corrió en
-  GitHub.
+- **PR #27:** falta que se resuelva la configuración de gitleaks y de Sonar, que el Quality
+  Gate vuelva a correr, que `imagen` (con `web:ci`) corra por primera vez en GitHub y que
+  Catalina vuelva a revisar (la revisión está en `CHANGES_REQUESTED`).
 
 ## Preguntas abiertas
 
