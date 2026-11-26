@@ -1,11 +1,19 @@
+# syntax=docker/dockerfile:1.7
 # Imagen que solo aplica las migraciones de PostgreSQL con goose y termina.
-# goose se compila desde go.mod/go.sum (directiva tool), así sus versiones quedan fijadas y verificadas.
-FROM golang:1.26.11-alpine3.23@sha256:23f198931d4bd83b4f5a613bd75656257ae8bf832dcbc2db80e1050b5219ca2a AS build
+# goose se compila desde su propio módulo (herramientas/goose): sus versiones quedan fijadas
+# y verificadas en su go.mod/go.sum, sin entrar al go.mod de la API.
+# No usa `go install …@v3.24.1` porque eso trae dependencias con vulnerabilidades conocidas
+# (docs/decisiones.md, D7).
+FROM --platform=$BUILDPLATFORM golang:1.26.11-alpine3.23@sha256:23f198931d4bd83b4f5a613bd75656257ae8bf832dcbc2db80e1050b5219ca2a AS build
 WORKDIR /src
-COPY apps/api/go.mod apps/api/go.sum ./
+COPY apps/api/herramientas/goose/go.mod apps/api/herramientas/goose/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
+ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/goose github.com/pressly/goose/v3/cmd/goose
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -buildvcs=false -trimpath -ldflags="-s -w" \
+    -o /out/goose github.com/pressly/goose/v3/cmd/goose
 
 FROM alpine:3.23.7@sha256:ff7f0c727dd796aa36787bfcd9a64bf35a6ce72a73451b3359fde849b6703d63
 RUN addgroup -S -g 10001 migrador && adduser -S -u 10001 -G migrador migrador
