@@ -1,4 +1,4 @@
-module github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api
+module github.com/PINGESO-CIVIL/usuarios-roles/apps/api
 
 go 1.26.0
 

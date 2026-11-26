@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/api"
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/config"
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/api"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/config"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service/tokens"
 )
 
 // TestTokensDePruebaSoloEnDesarrollo arma el servidor igual que main para cada API_ENV.

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service/tokens"
 )
 
 // Sesiones maneja el inicio y cierre de sesión, la validación de tokens y los
