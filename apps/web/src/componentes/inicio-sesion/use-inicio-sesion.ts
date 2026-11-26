@@ -26,8 +26,9 @@ export const BYTES_AVISO_CONTRASENA = 60
 const codificador = new TextEncoder()
 export const bytesDe = (texto: string) => codificador.encode(texto).length
 
-// Igual de permisivo que format: email del contrato: algo@algo.algo, sin espacios.
-const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Comprobación básica del format: email del contrato: algo@dominio.cl, sin espacios.
+// Cada etiqueta del dominio excluye el punto, así la regex no hace backtracking.
+const PATRON_CORREO = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/
 
 export const reglas = {
   correo: {

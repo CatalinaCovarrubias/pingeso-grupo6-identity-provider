@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 import { servidor } from "@/mocks/servidor"
 import { URL_API } from "@/pruebas/configuracion"
 import { InicioSesion } from "./inicio-sesion"
+import { reglas } from "./use-inicio-sesion"
 
 function montar(props: Partial<Parameters<typeof InicioSesion>[0]> = {}) {
   const alEntrar = vi.fn()
@@ -72,6 +73,20 @@ describe("inicio-sesion", () => {
 
     expect(pedidos).not.toHaveBeenCalled()
     servidor.events.removeAllListeners()
+  })
+
+  it.each([
+    ["admin@dev.local", true],
+    ["nombre.apellido+etiqueta@sub.dominio.cl", true],
+    ["sin-arroba", false],
+    ["sin@punto", false],
+    ["dos@@dominio.cl", false],
+    ["con espacio@dominio.cl", false],
+    ["punto@.dominio.cl", false],
+    ["punto@dominio.cl.", false],
+    ["puntos@dominio..cl", false],
+  ])("valida el formato del correo %s → %s", (correo, esValido) => {
+    expect(reglas.correo.pattern.value.test(correo)).toBe(esValido)
   })
 
   it("rechaza contraseñas de más de 72 bytes aunque tengan menos de 72 caracteres", async () => {
