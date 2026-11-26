@@ -1,0 +1,15 @@
+/*
+ * Fuentes sugeridas (opcional). Los microcomponentes no lo importan: usan
+ * var(--fuente-texto) y var(--fuente-mono), que por defecto son las fuentes del sistema.
+ * La app de desarrollo lo incluye, y un grupo cliente puede incluirlo si quiere estas fuentes.
+ */
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/atkinson-hyperlegible-mono";
+
+:root {
+  --fuente-texto:
+    "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --fuente-mono:
+    "Atkinson Hyperlegible Mono Variable", ui-monospace, "Cascadia Mono", monospace;
+}

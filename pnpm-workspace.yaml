@@ -1,5 +1,10 @@
 packages:
   - "apps/*"
 
-# Versiones exactas compartidas (sin ^). Se completa al crear apps/web.
-catalog: {}
+# Versiones exactas compartidas (sin ^). El resto de las dependencias del frontend
+# se fija en apps/web/package.json, según la tabla de la sección 3 del DAS.
+catalog:
+  react: 19.2.8
+  react-dom: 19.2.8
+  typescript: 6.0.3
+  vite: 8.1.6

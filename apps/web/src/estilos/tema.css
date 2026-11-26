@@ -1,0 +1,282 @@
+/*
+ * Tokens de diseño del servicio de identidad.
+ *
+ * Es el único CSS de los microcomponentes. Todo valor visual sale de aquí y queda expuesto
+ * como variable CSS en :root, así que un grupo cliente puede sobrescribirlo en su propio CSS,
+ * cargado después de este:
+ *
+ *   :root { --primary: oklch(0.5 0.15 150); --fuente-texto: "Mi Fuente", system-ui; }
+ *
+ * Los nombres de los colores semánticos siguen la convención de shadcn (--primary,
+ * --muted-foreground…) para que src/components/ui funcione sin cambios.
+ *
+ * Modo oscuro: todavía no existe. Cuando se agregue, basta redefinir los tokens semánticos
+ * (no las escalas) bajo un selector como [data-tema="oscuro"].
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Escalas: tonos definidos de antemano en OKLCH. Neutros fríos teñidos con el tono de la tinta. */
+:root {
+  --neutro-0: oklch(1 0 0);
+  --neutro-50: oklch(0.985 0.004 262);
+  --neutro-100: oklch(0.965 0.007 262);
+  --neutro-200: oklch(0.925 0.012 262);
+  --neutro-300: oklch(0.87 0.017 262);
+  --neutro-400: oklch(0.71 0.022 262);
+  --neutro-500: oklch(0.555 0.025 262);
+  --neutro-600: oklch(0.47 0.027 262);
+  --neutro-700: oklch(0.38 0.028 262);
+  --neutro-800: oklch(0.29 0.026 262);
+  --neutro-900: oklch(0.21 0.024 262);
+
+  /* Tinta de sobre: el azul del patrón de seguridad. Es el color primario. */
+  --tinta-50: oklch(0.97 0.016 262);
+  --tinta-100: oklch(0.935 0.033 262);
+  --tinta-200: oklch(0.87 0.065 262);
+  --tinta-300: oklch(0.78 0.1 262);
+  --tinta-400: oklch(0.65 0.14 262);
+  --tinta-500: oklch(0.54 0.16 263);
+  --tinta-600: oklch(0.46 0.15 264);
+  --tinta-700: oklch(0.39 0.13 265);
+  --tinta-800: oklch(0.32 0.105 266);
+
+  --peligro-50: oklch(0.97 0.014 20);
+  --peligro-100: oklch(0.935 0.035 20);
+  --peligro-600: oklch(0.52 0.19 25);
+  --peligro-700: oklch(0.45 0.17 25);
+  --peligro-800: oklch(0.38 0.14 25);
+
+  --advertencia-50: oklch(0.98 0.03 92);
+  --advertencia-100: oklch(0.95 0.065 90);
+  --advertencia-700: oklch(0.48 0.11 65);
+  --advertencia-800: oklch(0.41 0.095 60);
+
+  --exito-50: oklch(0.975 0.02 155);
+  --exito-100: oklch(0.94 0.045 155);
+  --exito-700: oklch(0.45 0.11 155);
+  --exito-800: oklch(0.38 0.09 155);
+}
+
+/* Tokens semánticos: lo que un cliente normalmente sobrescribe. */
+:root {
+  --background: var(--neutro-50);
+  --foreground: var(--neutro-900);
+  --card: var(--neutro-0);
+  --card-foreground: var(--neutro-900);
+  --popover: var(--neutro-0);
+  --popover-foreground: var(--neutro-900);
+  --primary: var(--tinta-600);
+  --primary-foreground: var(--neutro-0);
+  --primary-hover: var(--tinta-700);
+  --secondary: var(--neutro-100);
+  --secondary-foreground: var(--neutro-800);
+  --muted: var(--neutro-100);
+  --muted-foreground: var(--neutro-600);
+  --accent: var(--tinta-50);
+  --accent-foreground: var(--tinta-800);
+  --accent-border: var(--tinta-100);
+  --destructive: var(--peligro-600);
+  --border: var(--neutro-200);
+  /* Borde de inputs: al menos 3:1 contra la tarjeta (WCAG 1.4.11). */
+  --input: var(--neutro-500);
+  --ring: var(--tinta-500);
+
+  /* Estados: fondo tintado claro + texto oscuro del mismo tono. */
+  --estado-peligro-fondo: var(--peligro-50);
+  --estado-peligro-borde: var(--peligro-100);
+  --estado-peligro-texto: var(--peligro-800);
+  --estado-advertencia-fondo: var(--advertencia-50);
+  --estado-advertencia-borde: var(--advertencia-100);
+  --estado-advertencia-texto: var(--advertencia-800);
+  --estado-exito-fondo: var(--exito-50);
+  --estado-exito-borde: var(--exito-100);
+  --estado-exito-texto: var(--exito-800);
+
+  /* Patrón del sobre de seguridad: decorativo, nunca lleva texto encima. */
+  --patron-sobre-fondo: var(--tinta-50);
+  --patron-sobre-tinta: var(--tinta-200);
+
+  /* Tipografía: los microcomponentes no cargan fuentes. Ver estilos/fuentes.css. */
+  --fuente-texto:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fuente-mono:
+    ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+
+  /* Forma */
+  --radius: 0.5rem;
+
+  /* Movimiento: un solo gesto (abrir el sobre), corto y desactivado con movimiento reducido. */
+  --duracion-sobre: 180ms;
+  --curva-salida: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Puente hacia Tailwind: utilidades como bg-primary o text-muted-foreground leen estos tokens. */
+@theme inline {
+  --color-*: initial;
+  --color-white: var(--neutro-0);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-border: var(--accent-border);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-peligro-fondo: var(--estado-peligro-fondo);
+  --color-peligro-borde: var(--estado-peligro-borde);
+  --color-peligro-texto: var(--estado-peligro-texto);
+  --color-advertencia-fondo: var(--estado-advertencia-fondo);
+  --color-advertencia-borde: var(--estado-advertencia-borde);
+  --color-advertencia-texto: var(--estado-advertencia-texto);
+  --color-exito-fondo: var(--estado-exito-fondo);
+  --color-exito-borde: var(--estado-exito-borde);
+  --color-exito-texto: var(--estado-exito-texto);
+  --color-patron-fondo: var(--patron-sobre-fondo);
+  --color-patron-tinta: var(--patron-sobre-tinta);
+
+  --font-sans: var(--fuente-texto);
+  --font-mono: var(--fuente-mono);
+
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+
+  --ease-salida: var(--curva-salida);
+}
+
+/* Escalas cerradas: tipografía, pesos y sombras. El espaciado es la grilla de 4 px de Tailwind. */
+@theme {
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+
+  /* Dos pesos: normal y énfasis. "medium" (lo usa shadcn) cae en énfasis. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 600;
+
+  /* Sombras de dos capas, con luz desde arriba, teñidas con el neutro más oscuro. */
+  --shadow-*: initial;
+  --shadow-xs: 0 1px 2px 0 oklch(0.21 0.024 262 / 0.06);
+  --shadow-sm:
+    0 1px 2px 0 oklch(0.21 0.024 262 / 0.06), 0 1px 3px 0 oklch(0.21 0.024 262 / 0.1);
+  --shadow-md:
+    0 2px 4px -1px oklch(0.21 0.024 262 / 0.06),
+    0 4px 8px -2px oklch(0.21 0.024 262 / 0.1);
+  --shadow-lg:
+    0 4px 6px -2px oklch(0.21 0.024 262 / 0.05),
+    0 12px 20px -4px oklch(0.21 0.024 262 / 0.12);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  ::selection {
+    background-color: var(--tinta-100);
+    color: var(--tinta-800);
+  }
+}
+
+/*
+ * Banda del sobre de seguridad. El dibujo es una máscara y el color sale de los tokens
+ * (--patron-sobre-tinta sobre --patron-sobre-fondo), así que el cliente puede teñirla.
+ *
+ * Es CSS estándar con selectores completos (sin @utility ni anidamiento) para que lo
+ * entienda también el analizador de SonarQube.
+ */
+@layer components {
+  .patron-sobre {
+    background-color: var(--patron-sobre-fondo);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .patron-sobre::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(--patron-sobre-tinta);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M0 6 Q6 0 12 6 T24 6' fill='none' stroke='black' stroke-width='1'/%3E%3Cpath d='M0 12 Q6 6 12 12 T24 12 M0 0 Q6 -6 12 0 T24 0' fill='none' stroke='black' stroke-width='1'/%3E%3Cpath d='M0 3 L6 9 L12 3 L18 9 L24 3' fill='none' stroke='black' stroke-width='0.6'/%3E%3C/svg%3E");
+    mask-size: 24px 12px;
+    transform-origin: top;
+    transition:
+      transform var(--duracion-sobre) var(--curva-salida),
+      opacity var(--duracion-sobre) var(--curva-salida);
+  }
+
+  /* Sobre abierto (sesion-actual): la solapa con el patrón se recoge hacia arriba.
+     Sin el fondo tintado, la solapa recogida queda sobre la tarjeta, sin franja vacía. */
+  .sobre-abierto {
+    background-color: transparent;
+  }
+
+  .sobre-abierto::before {
+    transform: scaleY(0.35);
+    opacity: 0.7;
+  }
+
+  /* Contenido que aparece al abrir el sobre. */
+  .contenido-sobre {
+    transition:
+      transform var(--duracion-sobre) var(--curva-salida),
+      opacity var(--duracion-sobre) var(--curva-salida);
+  }
+
+  /*
+   * Punto de partida de las dos animaciones. Tiene que ir DESPUÉS de las reglas de arriba:
+   * la especificidad es la misma y gana la última, así que antes de ellas no animaría.
+   */
+  @starting-style {
+    .sobre-abierto::before {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+
+  @starting-style {
+    .contenido-sobre {
+      opacity: 0;
+      transform: translateY(0.25rem);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .patron-sobre::before,
+  .contenido-sobre {
+    transition: none;
+  }
+}

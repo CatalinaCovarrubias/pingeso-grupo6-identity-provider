@@ -1,0 +1,58 @@
+{
+  "name": "web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "vite --mode backend",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "codegen": "openapi-typescript ../../contracts/openapi.yaml -o src/api/esquema.d.ts && node scripts/generar-mocks.mjs",
+    "test": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:spa": "cd spa-server && go test ./...",
+    "verify:spa": "cd spa-server && go vet ./..."
+  },
+  "dependencies": {
+    "@base-ui/react": "1.6.0",
+    "@tanstack/react-query": "5.101.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.70.0",
+    "openapi-fetch": "0.15.2",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-hook-form": "7.83.0",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/atkinson-hyperlegible-mono": "5.3.0",
+    "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
+    "@playwright/test": "1.62.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "22.20.5",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.0.4",
+    "@vitest/coverage-v8": "4.1.12",
+    "jsdom": "30.1.3",
+    "msw": "2.15.0",
+    "openapi-typescript": "7.13.0",
+    "tailwindcss": "4.3.3",
+    "tw-animate-css": "1.4.0",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "4.1.12",
+    "yaml": "2.9.1"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}
