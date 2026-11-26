@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service"
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service/tokens"
 )
 
 // Interfaces de los services que usan los handlers. Los handlers no conocen el store.

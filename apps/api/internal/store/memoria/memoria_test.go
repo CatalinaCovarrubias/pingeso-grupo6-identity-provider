@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service"
 )
 
 func conSeed(t *testing.T) *Memoria {

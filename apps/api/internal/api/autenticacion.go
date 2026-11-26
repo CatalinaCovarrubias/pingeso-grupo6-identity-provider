@@ -6,7 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service"
 )
 
 // Valores de x-permiso que no son un permiso <recurso>:<accion>.

@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/CatalinaCovarrubias/pingeso-grupo6-identity-provider/apps/api/internal/service/tokens"
+	"github.com/PINGESO-CIVIL/usuarios-roles/apps/api/internal/service/tokens"
 )
 
 func TestLoginCorrectoFijaLaCookie(t *testing.T) {
