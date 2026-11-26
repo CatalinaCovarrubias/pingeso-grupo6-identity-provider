@@ -147,9 +147,9 @@ Sirve como **insumo de diseño** para los structs de Huma, no para copiarlo tal 
 
 ```bash
 gh auth login
-gh api repos/CatalinaCovarrubias/pingeso-grupo6-identity-provider/branches/main/protection   # 404 = sin protección
+gh api repos/PINGESO-CIVIL/usuarios-roles/branches/main/protection   # 404 = sin protección
 gh run list --branch main --limit 5                                                             # estado del pipeline
-gh secret list --repo CatalinaCovarrubias/pingeso-grupo6-identity-provider                      # SONAR_TOKEN y SONAR_HOST_URL
+gh secret list --repo PINGESO-CIVIL/usuarios-roles                      # SONAR_TOKEN y SONAR_HOST_URL
 gh pr list --state all
 ```
 
